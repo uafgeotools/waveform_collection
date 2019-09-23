@@ -13,6 +13,9 @@ import warnings
 from .grid import calculate_time_buffer
 
 
+# Always show warnings
+warnings.filterwarnings('always')
+
 # Get location of folder containing this script
 dirname = os.path.dirname(__file__)
 
