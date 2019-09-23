@@ -11,8 +11,18 @@ import json
 import fnmatch
 import warnings
 from .grid import calculate_time_buffer
-from . import AVO_INFRA_COORDS, AVO_INFRA_CALIBS
 
+
+# Get location of folder containing this script
+dirname = os.path.dirname(__file__)
+
+# Load AVO infrasound station calibration values (units are Pa/ct)
+with open(os.path.join(dirname, 'avo_json', 'avo_infra_calibs.json')) as f:
+    AVO_INFRA_CALIBS = json.load(f)
+
+# Load AVO infrasound station coordinates (elevation units are meters)
+with open(os.path.join(dirname, 'avo_json', 'avo_infra_coords.json')) as f:
+    AVO_INFRA_COORDS = json.load(f)
 
 # Define IRIS and AVO clients (define WATC client within function)
 iris_client = FDSN_Client('IRIS')
