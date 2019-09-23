@@ -47,7 +47,11 @@ def gather_waveforms(source, network, station, starttime, endtime,
     output a Stream object with station/element coordinates attached.
     Optionally remove the sensitivity.
 
-    NOTE:
+    NOTE 1:
+        WATC database will NOT be used for station search NOR data download
+        unless BOTH watc_username and watc_password are set.
+
+    NOTE 2:
         Usual RTM usage is to specify a starttime/endtime that brackets the
         estimated source origin time. Then time_buffer is used to download
         enough extra data to account for the time required for an infrasound
@@ -295,11 +299,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         Usual RTM usage is to specify a starttime/endtime that brackets the
         estimated source origin time. Then time_buffer is used to download
         enough extra data to account for the time required for an infrasound
-        signal to propagate to the farthest station. This function can
-        automatically calculate an appropriate buffer time (it assumes that the
-        station search center and source grid center are identical, which in
-        practice should be the case since the grid center should be used as the
-        station search center).
+        signal to propagate to the farthest station.
 
     Args:
         lon_0: [deg] Longitude of search center
@@ -307,8 +307,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         max_radius: [km] Maximum radius to search for stations within
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
-        time_buffer: [s] Extra amount of data to download after endtime; passed
-                     on to the calls to gather_waveforms() (default: 0)
+        time_buffer: [s] Extra amount of data to download after endtime
+                     (default: 0)
         remove_response: Toggle conversion to Pa via remove_sensitivity() if
                          available, else just do a simple scalar multiplication
                          (default: False)
