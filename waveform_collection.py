@@ -348,8 +348,6 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
     requested_station_list = []  # Initialize list of stations to request
 
-    max_station_dist = 0  # [m] Keep track of the most distant station
-
     # Big loop through all channels in all inventories!
     for inv in inventories:
         for nw in inv:
@@ -359,18 +357,12 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                   cha.longitude)  # [m]
                     if dist <= max_radius * KM2M:
                         requested_station_list.append(stn.code)
-                        # Keep track of most distant station (within radius)
-                        if dist > max_station_dist:
-                            max_station_dist = dist
 
     # Loop through each entry in AVO infrasound station coordinates JSON file
     for sta, coord in AVO_INFRA_COORDS.items():
         dist, _, _ = gps2dist_azimuth(lat_0, lon_0, *coord[0:2])  # [m]
         if dist <= max_radius * KM2M:
             requested_station_list.append(sta)
-            # Keep track of most distant station (within radius)
-            if dist > max_station_dist:
-                max_station_dist = dist
 
     if not requested_station_list:
         raise ValueError('Station list is empty. Expand the station search '
