@@ -4,13 +4,11 @@ from obspy.clients.fdsn.header import FDSNNoDataException
 from obspy.geodetics import gps2dist_azimuth
 from obspy import Stream, read, UTCDateTime
 import numpy as np
-from xarray import DataArray
 import os
 import glob
 import json
 import fnmatch
 import warnings
-from .grid import calculate_time_buffer
 
 
 # Always show warnings
@@ -309,13 +307,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         max_radius: [km] Maximum radius to search for stations within
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
-        time_buffer: Either a buffer time in s or an RTM grid (i.e., an
-                     xarray.DataArray output from define_grid() for this
-                     event). If a grid is specified, the buffer time in s is
-                     automatically calculated based upon the grid params and
-                     this function's station locations. This is the extra
-                     amount of data to download after endtime, and is simply
-                     passed on to the calls to gather_waveforms() (default: 0)
+        time_buffer: [s] Extra amount of data to download after endtime; passed
+                     on to the calls to gather_waveforms() (default: 0)
         remove_response: Toggle conversion to Pa via remove_sensitivity() if
                          available, else just do a simple scalar multiplication
                          (default: False)
@@ -387,12 +380,6 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     requested_stations = ','.join(np.unique(requested_station_list))
 
     print('Done')
-
-    # Check if time_buffer is an xarray.DataArray - if so, the user wants a
-    # buffer time to be automatically calculated from this grid
-    if type(time_buffer) == DataArray:
-        time_buffer = calculate_time_buffer(grid=time_buffer,
-                                            max_station_dist=max_station_dist)  # [s]
 
     if time_buffer != 0:
         print(f'Using time buffer of {time_buffer:.1f} s '
