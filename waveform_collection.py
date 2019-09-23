@@ -11,7 +11,7 @@ import json
 import fnmatch
 import warnings
 from .grid import calculate_time_buffer
-from . import AVO_INFRA_COORDS, AVO_INFRA_CALIBS, RTMWarning
+from . import AVO_INFRA_COORDS, AVO_INFRA_CALIBS
 
 
 # Define IRIS and AVO clients (define WATC client within function)
@@ -77,7 +77,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
     # Warn if buffer is set to 0 s
     if time_buffer == 0:
         warnings.warn('Time buffer is set to 0 seconds. Are you sure you\'ve '
-                      'downloaded enough data for RTM?', RTMWarning)
+                      'downloaded enough data for RTM?')
 
     # IRIS FDSN
     if source == 'IRIS':
@@ -175,7 +175,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
                 # If we're not returning the failed stations, then show this
                 # warning message to alert the user
                 warnings.warn(f'Station {sta} not downloaded from {source} '
-                              'server for this time period.', RTMWarning)
+                              'server for this time period.')
             failed_stations.append(sta)
 
     # If the Stream is empty, then we can stop here
@@ -226,8 +226,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
             try:
                 tr.stats.latitude, tr.stats.longitude,\
                     tr.stats.elevation = AVO_INFRA_COORDS[tr.stats.station]
-                warnings.warn(f'Using coordinates from JSON file for {tr.id}.',
-                              RTMWarning)
+                warnings.warn(f'Using coordinates from JSON file for {tr.id}.')
             except KeyError:
                 print(f'No coordinates available for {tr.id}. Stopping.')
                 raise
@@ -251,7 +250,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
                                                f'calibration value of {calib} '
                                                'Pa/ct')
                     warnings.warn('Using calibration value from JSON file for '
-                                  f'{tr.id}.', RTMWarning)
+                                  f'{tr.id}.')
                 except KeyError:
                     print('No calibration value available for {tr.id}. '
                           'Stopping.')
@@ -443,7 +442,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                 print('--------------')
                 for sta in remaining_failed:
                     warnings.warn(f'Station {sta} found in radius search but '
-                                  'no data found.', RTMWarning)
+                                  'no data found.')
 
     print('--------------')
     print('Finishing gathering waveforms from station list. Check warnings '
