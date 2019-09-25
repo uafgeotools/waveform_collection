@@ -440,7 +440,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     return st_out
 
 
-def read_local(data_dir, coord_file, network, station, starttime, endtime):
+def read_local(data_dir, coord_file, network, station, location, channel,
+               starttime, endtime):
     """
     Read in waveforms from "local" 1-hour, IRIS-compliant miniSEED files, and
     output a Stream object with station/element coordinates attached.
@@ -451,14 +452,16 @@ def read_local(data_dir, coord_file, network, station, starttime, endtime):
 
     NOTE 2:
         This function assumes that the response has been removed from the
-        waveforms in the input miniSEED files. This is usually the case.
+        waveforms in the input miniSEED files.
 
     Args:
         data_dir: Directory containing miniSEED files
         coord_file: JSON file containing coordinates for local stations (full
                     path required)
-        network: SEED network code
-        station: SEED station code
+        network: SEED network code [wildcards (*) accepted]
+        station: SEED station code [wildcards (*) accepted]
+        location: SEED location code [wildcards (*) accepted]
+        channel: SEED channel code [wildcards (*) accepted]
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
 
@@ -478,8 +481,8 @@ def read_local(data_dir, coord_file, network, station, starttime, endtime):
     endtime_hr = UTCDateTime(endtime.year, endtime.month, endtime.day,
                              endtime.hour)
 
-    # Define filename template (don't check location or channel!)
-    template = f'{network}.{station}.*.*.{{}}.{{}}.{{}}'
+    # Define filename template
+    template = f'{network}.{station}.{location}.{channel}.{{}}.{{}}.{{}}'
 
     # Initialize Stream object
     st_out = Stream()
