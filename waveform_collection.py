@@ -26,8 +26,8 @@ with open(os.path.join(dirname, 'avo_json', 'avo_infra_coords.json')) as f:
 iris_client = FDSN_Client('IRIS')
 avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
 
-# Channels to use in data requests - covering all the bases here!
-CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
+# Default infrasound channels - covering all the bases here!
+INFRA_CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
 
 # Define some conversion factors
 KM2M = 1000     # [m/km]
@@ -35,13 +35,13 @@ SEC2MIN = 1/60  # [min/s]
 HR2SEC = 3600   # [s/hr]
 
 
-def gather_waveforms(source, network, station, starttime, endtime,
-                     time_buffer=0, remove_response=False,
+def gather_waveforms(source, network, station, location, channel, starttime,
+                     endtime, time_buffer=0, remove_response=False,
                      return_failed_stations=False, watc_username=None,
                      watc_password=None):
     """
-    Gather infrasound waveforms from IRIS or WATC FDSN, or AVO Winston, and
-    output a Stream object with station/element coordinates attached.
+    Gather seismic/infrasound waveforms from IRIS or WATC FDSN, or AVO Winston,
+    and output a Stream object with station/element coordinates attached.
     Optionally remove the sensitivity.
 
     NOTE 1:
@@ -63,11 +63,13 @@ def gather_waveforms(source, network, station, starttime, endtime,
                 'AVO'  <-- AVO Winston
         network: SEED network code
         station: SEED station code
+        location: SEED location code
+        channel: SEED channel code
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
         time_buffer: [s] Extra amount of data to download after endtime
                      (default: 0)
-        remove_response: Toggle conversion to Pa via remove_sensitivity() if
+        remove_response: Toggle response removal via remove_sensitivity() if
                          available, else just do a simple scalar multiplication
                          (default: False)
         return_failed_stations: If True, returns a list of station codes that
@@ -96,8 +98,9 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
         print('Reading data from IRIS FDSN...')
         try:
-            st_out = iris_client.get_waveforms(network, station, '*', CHANNELS,
-                                               starttime, endtime + time_buffer,
+            st_out = iris_client.get_waveforms(network, station, location,
+                                               channel, starttime,
+                                               endtime + time_buffer,
                                                attach_response=remove_response)
         except FDSNNoDataException:
             st_out = Stream()  # Just create an empty Stream object
@@ -112,8 +115,9 @@ def gather_waveforms(source, network, station, starttime, endtime,
 
         print('Successfully connected. Reading data from WATC FDSN...')
         try:
-            st_out = watc_client.get_waveforms(network, station, '*', CHANNELS,
-                                               starttime, endtime + time_buffer,
+            st_out = watc_client.get_waveforms(network, station, location,
+                                               channel, starttime,
+                                               endtime + time_buffer,
                                                attach_response=remove_response)
         except FDSNNoDataException:
             st_out = Stream()  # Just create an empty Stream object
@@ -122,55 +126,23 @@ def gather_waveforms(source, network, station, starttime, endtime,
     elif source == 'AVO':
 
         print('Reading data from AVO Winston...')
-        try:
-            # Array case
-            if station in ['ADKI', 'AKS', 'DLL', 'OKIF', 'SDPI']:
+        st_out = Stream()  # Make empty Stream object to populate
 
-                # Select the correct channel
-                if station in ['DLL', 'OKIF']:
-                    channel = 'HDF'
-                else:
-                    channel = 'BDF'
-
-                st_out = Stream()  # Make an empty Stream object to populate
-
-                # Deal with funky channel naming convention for AKS (for all
-                # other arrays, six numbered elements are assumed)
-                if station == 'AKS':
-                    for channel in ['BDF', 'BDG', 'BDH', 'BDI', 'BDJ', 'BDK']:
-                        st_out += avo_client.get_waveforms(network, station,
-                                                           '--', channel,
-                                                           starttime,
-                                                           endtime + time_buffer)
-                else:
-                    for location in ['01', '02', '03', '04', '05', '06']:
-                        st_out += avo_client.get_waveforms(network, station,
-                                                           location, channel,
-                                                           starttime,
-                                                           endtime + time_buffer)
-
-            # Single station case
-            else:
-                st_out = avo_client.get_waveforms(network, station, '--',
-                                                  'BDF', starttime,
-                                                  endtime + time_buffer)
-
-                # Special case for single stations with HDF channel
-                if station in ['CLES1', 'CLES2', 'HAG', 'PVV', 'SSLN']:
-                    st_out += avo_client.get_waveforms(network, station, '--',
-                                                       'HDF', starttime,
-                                                       endtime + time_buffer)
-
-        # KeyError means that the station is not on AVO Winston for ANY time
-        # period, OR that the user didn't format the request (e.g., station
-        # string) appropriately
-        except KeyError:
-            st_out = Stream()  # Just create an empty Stream object
+        # Brute-force "dynamic grid search" over network/station/channel/location codes
+        for nw in _restricted_matching('network', network):
+            for sta in _restricted_matching('station', station, network=nw):
+                for cha in _restricted_matching('channel', channel, network=nw, station=sta):
+                    for loc in _restricted_matching('location', location, network=nw, station=sta, channel=cha):
+                        try:
+                            st_out += avo_client.get_waveforms(nw, sta, loc, cha, starttime, endtime + time_buffer)
+                        except KeyError:
+                            pass
 
     else:
         raise ValueError('Unrecognized source. Valid options are \'IRIS\', '
                          '\'WATC\', or \'AVO\'.')
 
+    st_out.merge()  # Merge Traces with the same ID
     st_out.sort()
 
     # Check that all requested stations are present in Stream
@@ -209,6 +181,7 @@ def gather_waveforms(source, network, station, starttime, endtime,
     # Assign coordinates using IRIS FDSN regardless of data source
     try:
         inv = iris_client.get_stations(network=network, station=station,
+                                       location=location, channel=channel,
                                        starttime=starttime,
                                        endtime=endtime + time_buffer,
                                        level='channel')
@@ -278,9 +251,10 @@ def gather_waveforms(source, network, station, starttime, endtime,
         return st_out
 
 
-def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
-                          time_buffer=0, remove_response=False,
-                          watc_username=None, watc_password=None):
+def gather_waveforms_bulk(lon_0, lat_0, max_radius, network, station, location,
+                          channel, starttime, endtime, time_buffer=0,
+                          remove_response=False, watc_username=None,
+                          watc_password=None):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
@@ -302,6 +276,10 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         lon_0: [deg] Longitude of search center
         lat_0: [deg] Latitude of search center
         max_radius: [km] Maximum radius to search for stations within
+        network: SEED network code
+        station: SEED station code
+        location: SEED location code
+        channel: SEED channel code
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
         time_buffer: [s] Extra amount of data to download after endtime
@@ -321,9 +299,12 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
     print('Creating station list...')
 
-    # Grab IRIS inventory - not accounting for buffer here
-    iris_inv = iris_client.get_stations(starttime=starttime, endtime=endtime,
-                                        channel=CHANNELS, level='channel')
+    # Grab IRIS inventory
+    iris_inv = iris_client.get_stations(starttime=starttime,
+                                        endtime=endtime + time_buffer,
+                                        network=network, station=station,
+                                        location=location, channel=channel,
+                                        level='channel')
 
     inventories = [iris_inv]  # Add IRIS inventory to list
 
@@ -336,9 +317,11 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                   password=watc_password)
         print('Successfully connected.')
 
-        # Grab WATC inventory - not accounting for buffer here
+        # Grab WATC inventory
         watc_inv = watc_client.get_stations(starttime=starttime,
-                                            endtime=endtime, channel=CHANNELS,
+                                            endtime=endtime + time_buffer,
+                                            network=network, station=station,
+                                            location=location, channel=channel,
                                             level='channel')
 
         inventories.append(watc_inv)  # Add WATC inventory to list
@@ -379,8 +362,9 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     st_out = Stream()  # Initialize empty Stream to populate
 
     # Gather waveforms from IRIS
-    iris_st, iris_failed = gather_waveforms(source='IRIS', network='*',
+    iris_st, iris_failed = gather_waveforms(source='IRIS', network=network,
                                             station=requested_stations,
+                                            location=location, channel=channel,
                                             starttime=starttime,
                                             endtime=endtime,
                                             time_buffer=time_buffer,
@@ -394,8 +378,10 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
         if watc_username and watc_password:
             # Gather waveforms from WATC
-            watc_st, watc_failed = gather_waveforms(source='WATC', network='*',
+            watc_st, watc_failed = gather_waveforms(source='WATC', network=network,
                                                     station=','.join(iris_failed),
+                                                    location=location,
+                                                    channel=channel,
                                                     starttime=starttime,
                                                     endtime=endtime,
                                                     time_buffer=time_buffer,
@@ -405,7 +391,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                     watc_password=watc_password)
         else:
             # Return an empty Stream and same failed stations
-            watc_st, watc_failed = Stream(), iris_failed
+            watc_st = Stream()
+            watc_failed = iris_failed
 
         st_out += watc_st
 
@@ -413,25 +400,25 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         if watc_failed:
 
             # Gather waveforms from AVO
-            remaining_failed = []
-            for sta in watc_failed:
-                avo_st, avo_failed = gather_waveforms(source='AVO',
-                                                      network='AV',
-                                                      station=sta,
-                                                      starttime=starttime,
-                                                      endtime=endtime,
-                                                      time_buffer=time_buffer,
-                                                      remove_response=remove_response,
-                                                      return_failed_stations=True)
-
-                st_out += avo_st
-                remaining_failed += avo_failed
+            avo_st, remaining_failed = gather_waveforms(source='AVO',
+                                                        network=network,
+                                                        station=','.join(watc_failed),
+                                                        location=location,
+                                                        channel=channel,
+                                                        starttime=starttime,
+                                                        endtime=endtime,
+                                                        time_buffer=time_buffer,
+                                                        remove_response=remove_response,
+                                                        return_failed_stations=True)
 
             if remaining_failed:
                 print('--------------')
                 for sta in remaining_failed:
                     warnings.warn(f'Station {sta} found in radius search but '
                                   'no data found.')
+
+    st_out.merge()  # Merge Traces with the same ID
+    st_out.sort()
 
     print('--------------')
     print('Finishing gathering waveforms from station list. Check warnings '
@@ -458,10 +445,10 @@ def read_local(data_dir, coord_file, network, station, location, channel,
         data_dir: Directory containing miniSEED files
         coord_file: JSON file containing coordinates for local stations (full
                     path required)
-        network: SEED network code [wildcards (*) accepted]
-        station: SEED station code [wildcards (*) accepted]
-        location: SEED location code [wildcards (*) accepted]
-        channel: SEED channel code [wildcards (*) accepted]
+        network: SEED network code [wildcards (*, ?) accepted]
+        station: SEED station code [wildcards (*, ?) accepted]
+        location: SEED location code [wildcards (*, ?) accepted]
+        channel: SEED channel code [wildcards (*, ?) accepted]
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
 
@@ -504,7 +491,7 @@ def read_local(data_dir, coord_file, network, station, location, channel,
 
         tmp_time += HR2SEC  # Add an hour!
 
-    st_out.merge()  # Merge traces with the same ID
+    st_out.merge()  # Merge Traces with the same ID
     st_out.sort()
 
     # If the Stream is empty, then we can stop here
@@ -535,3 +522,76 @@ def read_local(data_dir, coord_file, network, station, location, channel,
 
     # Return the Stream with coordinates attached
     return st_out
+
+
+def _restricted_matching(code_type, requested_codes, **restriction_kwargs):
+    """
+    Find all SEED network/station/location/channel codes on AVO Winston that
+    match a user-supplied query string. Optionally constrain the search to a
+    particular network/station/location/channel using keyword arguments passed
+    on to `avo_client.get_availability()`.
+
+    Args:
+        code_type: One of 'network', 'station', 'location', or 'channel'
+        requested_codes: Comma-separated SEED code string (wildcards accepted)
+        **restriction_kwargs: Query restrictions to be passed on to
+                              `avo_client.get_availability()`
+    Returns:
+        restricted_matching_codes: A list of SEED codes for `code_type`,
+                                   subject to the query restrictions given in
+                                   `**restriction_kwargs` AND matching the
+                                   patterns in `requested_codes`
+    """
+
+    # Get availability on AVO Winston subject to optional network/station/
+    # location/channel restrictions
+    inv = np.array(avo_client.get_availability(**restriction_kwargs))
+
+    if inv.size is 0:
+        # Nothing available; create empty code container
+        all_codes = np.empty((4, 0))
+    else:
+        # Discard the time info (5th and 6th entries) and convert to strings
+        all_codes = inv[:,0:4].T.astype(str)
+
+    # Gather unique codes present on AVO Winston given restrictions
+    nw_unique, sta_unique, \
+    loc_unique, cha_unique = [np.unique(code).tolist() for code in all_codes]
+
+    if code_type == 'network':
+        restricted_matching_codes = _matching(nw_unique, requested_codes)
+    elif code_type == 'station':
+        restricted_matching_codes = _matching(sta_unique, requested_codes)
+    elif code_type == 'location':
+        restricted_matching_codes = _matching(loc_unique, requested_codes)
+    elif code_type == 'channel':
+        restricted_matching_codes = _matching(cha_unique, requested_codes)
+    else:
+        raise ValueError(f'Code type \'{code_type}\' not recognized!')
+
+    return restricted_matching_codes
+
+
+def _matching(unique_code_list, requested_codes):
+    """
+    Takes a comma-separated SEED code string (e.g., 'BD?,HDF') and returns the
+    subset of an input list of unique codes (e.g., ['BDF', 'EHZ', 'DDF']) that
+    matches the patterns in the comma-separated SEED code string.
+
+    Args:
+        unique_code_list: List of unique code strings
+        requested_codes: Comma-separated SEED code string (wildcards accepted)
+    Returns:
+        matching_codes: Subset of `unique_code_list` that matches the patterns
+                        in `requested_codes`
+    """
+
+    matching_codes = []
+
+    # Split requested codes/patterns into a list of strings
+    for pattern in requested_codes.split(','):
+
+        # Return the subset of unique codes matched by the pattern
+        matching_codes += fnmatch.filter(unique_code_list, pattern)
+
+    return matching_codes
