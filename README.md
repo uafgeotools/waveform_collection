@@ -34,7 +34,8 @@ Then you can access package functions with (for example)
 ```python
 from waveform_collection import gather_waveforms
 ```
-and so on. Currently, documentation only exists in function docstrings.
+and so on. Currently, documentation only exists in function docstrings. For a
+usage example, see [`example.py`](example.py).
 
 Authors
 -------
