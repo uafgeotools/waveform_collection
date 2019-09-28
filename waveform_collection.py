@@ -27,7 +27,7 @@ iris_client = FDSN_Client('IRIS')
 avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
 
 # Default infrasound channels - covering all the bases here!
-INFRA_CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
+INFRASOUND_CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
 
 # Define some conversion factors
 KM2M = 1000     # [m/km]
@@ -251,10 +251,10 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         return st_out
 
 
-def gather_waveforms_bulk(lon_0, lat_0, max_radius, network, station, location,
-                          channel, starttime, endtime, time_buffer=0,
-                          remove_response=False, watc_username=None,
-                          watc_password=None):
+def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
+                          channel, network='*', station='*', location='*',
+                          time_buffer=0, remove_response=False,
+                          watc_username=None, watc_password=None):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
@@ -272,16 +272,20 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, network, station, location,
         enough extra data to account for the time required for an infrasound
         signal to propagate to the farthest station.
 
+    NOTE 3:
+        Regardless of network/station/location/channel constraints, all of the
+        stations in JSON files are always added to the requested station list.
+
     Args:
         lon_0: [deg] Longitude of search center
         lat_0: [deg] Latitude of search center
         max_radius: [km] Maximum radius to search for stations within
-        network: SEED network code
-        station: SEED station code
-        location: SEED location code
-        channel: SEED channel code
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
+        channel: SEED channel code (REQUIRED PARAMETER!)
+        network: SEED network code (default: '*')
+        station: SEED station code (default: '*')
+        location: SEED location code (default: '*')
         time_buffer: [s] Extra amount of data to download after endtime
                      (default: 0)
         remove_response: Toggle conversion to Pa via remove_sensitivity() if
@@ -299,14 +303,20 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, network, station, location,
 
     print('Creating station list...')
 
-    # Grab IRIS inventory
-    iris_inv = iris_client.get_stations(starttime=starttime,
-                                        endtime=endtime + time_buffer,
-                                        network=network, station=station,
-                                        location=location, channel=channel,
-                                        level='channel')
+    inventories = []  # Create empty list of inventories
 
-    inventories = [iris_inv]  # Add IRIS inventory to list
+    # Grab IRIS inventory
+    try:
+        iris_inv = iris_client.get_stations(starttime=starttime,
+                                            endtime=endtime + time_buffer,
+                                            network=network, station=station,
+                                            location=location, channel=channel,
+                                            level='channel')
+
+        inventories.append(iris_inv)  # Add IRIS inventory to list
+
+    except FDSNNoDataException:
+        print('No stations found on IRIS FDSN.')
 
     # If the user supplied both a WATC password and WATC username, then search
     # through WATC database
@@ -318,13 +328,17 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, network, station, location,
         print('Successfully connected.')
 
         # Grab WATC inventory
-        watc_inv = watc_client.get_stations(starttime=starttime,
-                                            endtime=endtime + time_buffer,
-                                            network=network, station=station,
-                                            location=location, channel=channel,
-                                            level='channel')
+        try:
+            watc_inv = watc_client.get_stations(starttime=starttime,
+                                                endtime=endtime + time_buffer,
+                                                network=network, station=station,
+                                                location=location, channel=channel,
+                                                level='channel')
 
-        inventories.append(watc_inv)  # Add WATC inventory to list
+            inventories.append(watc_inv)  # Add WATC inventory to list
+
+        except FDSNNoDataException:
+            print('No stations found on WATC FDSN.')
 
     requested_station_list = []  # Initialize list of stations to request
 
@@ -416,6 +430,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, network, station, location,
                 for sta in remaining_failed:
                     warnings.warn(f'Station {sta} found in radius search but '
                                   'no data found.')
+
+            st_out += avo_st
 
     st_out.merge()  # Merge Traces with the same ID
     st_out.sort()
