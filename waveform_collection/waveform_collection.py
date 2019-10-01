@@ -37,7 +37,7 @@ HR2SEC = 3600   # [s/hr]
 
 
 def gather_waveforms(source, network, station, location, channel, starttime,
-                     endtime, time_buffer=0, remove_response=False,
+                     endtime, time_buffer=0, merge=True, remove_response=False,
                      return_failed_stations=False, watc_username=None,
                      watc_password=None):
     """
@@ -70,6 +70,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         endtime: End time for data request (UTCDateTime)
         time_buffer: [s] Extra amount of data to download after endtime
                      (default: 0)
+        merge: Toggle merging of Traces with identical IDs (default: True)
         remove_response: Toggle response removal via remove_sensitivity() if
                          available, else just do a simple scalar multiplication
                          (default: False)
@@ -143,7 +144,8 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         raise ValueError('Unrecognized source. Valid options are \'IRIS\', '
                          '\'WATC\', or \'AVO\'.')
 
-    st_out.merge()  # Merge Traces with the same ID
+    if merge:
+        st_out.merge()  # Merge Traces with the same ID
     st_out.sort()
 
     # Check that all requested stations are present in Stream
@@ -255,7 +257,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 
 def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                           channel, network='*', station='*', location='*',
-                          time_buffer=0, remove_response=False,
+                          time_buffer=0, merge=True, remove_response=False,
                           watc_username=None, watc_password=None):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
@@ -290,6 +292,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         location: SEED location code (default: '*')
         time_buffer: [s] Extra amount of data to download after endtime
                      (default: 0)
+        merge: Toggle merging of Traces with identical IDs (default: True)
         remove_response: Toggle conversion to Pa via remove_sensitivity() if
                          available, else just do a simple scalar multiplication
                          (default: False)
@@ -435,7 +438,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
             st_out += avo_st
 
-    st_out.merge()  # Merge Traces with the same ID
+    if merge:
+        st_out.merge()  # Merge Traces with the same ID
     st_out.sort()
 
     print('--------------')
@@ -446,7 +450,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
 
 def read_local(data_dir, coord_file, network, station, location, channel,
-               starttime, endtime):
+               starttime, endtime, merge=True):
     """
     Read in waveforms from "local" 1-hour, IRIS-compliant miniSEED files, and
     output a Stream object with station/element coordinates attached.
@@ -469,6 +473,7 @@ def read_local(data_dir, coord_file, network, station, location, channel,
         channel: SEED channel code [wildcards (*, ?) accepted]
         starttime: Start time for data request (UTCDateTime)
         endtime: End time for data request (UTCDateTime)
+        merge: Toggle merging of Traces with identical IDs (default: True)
 
     Returns:
         st_out: Stream containing gathered waveforms
@@ -509,7 +514,8 @@ def read_local(data_dir, coord_file, network, station, location, channel,
 
         tmp_time += HR2SEC  # Add an hour!
 
-    st_out.merge()  # Merge Traces with the same ID
+    if merge:
+        st_out.merge()  # Merge Traces with the same ID
     st_out.sort()
 
     # If the Stream is empty, then we can stop here
