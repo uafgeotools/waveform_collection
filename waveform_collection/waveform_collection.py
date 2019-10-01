@@ -9,17 +9,18 @@ import glob
 import json
 import fnmatch
 import warnings
+from . import CollectionWarning
 
 
-# Get location of folder containing this script
-dirname = os.path.dirname(__file__)
+# Get location of AVO JSON files
+json_dir = os.path.join(os.path.dirname(__file__), '..', 'avo_json')
 
 # Load AVO infrasound station calibration values (units are Pa/ct)
-with open(os.path.join(dirname, 'avo_json', 'avo_infra_calibs.json')) as f:
+with open(os.path.join(json_dir, 'avo_infra_calibs.json')) as f:
     AVO_INFRA_CALIBS = json.load(f)
 
 # Load AVO infrasound station coordinates (elevation units are meters)
-with open(os.path.join(dirname, 'avo_json', 'avo_infra_coords.json')) as f:
+with open(os.path.join(json_dir, 'avo_infra_coords.json')) as f:
     AVO_INFRA_COORDS = json.load(f)
 
 # Define IRIS and AVO clients (define WATC client within function)
@@ -91,7 +92,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     # Warn if buffer is set to 0 s
     if time_buffer == 0:
         warnings.warn('Time buffer is set to 0 seconds. Are you sure you\'ve '
-                      'downloaded enough data for RTM?')
+                      'downloaded enough data for RTM?', CollectionWarning)
 
     # IRIS FDSN
     if source == 'IRIS':
@@ -159,7 +160,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                 # If we're not returning the failed stations, then show this
                 # warning message to alert the user
                 warnings.warn(f'Station {sta} not downloaded from {source} '
-                              'server for this time period.')
+                              'server for this time period.', CollectionWarning)
             failed_stations.append(sta)
 
     # If the Stream is empty, then we can stop here
@@ -211,7 +212,8 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             try:
                 tr.stats.latitude, tr.stats.longitude,\
                     tr.stats.elevation = AVO_INFRA_COORDS[tr.stats.station]
-                warnings.warn(f'Using coordinates from JSON file for {tr.id}.')
+                warnings.warn(f'Using coordinates from JSON file for {tr.id}.',
+                              CollectionWarning)
             except KeyError:
                 print(f'No coordinates available for {tr.id}. Stopping.')
                 raise
@@ -235,7 +237,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                                                f'calibration value of {calib} '
                                                'Pa/ct')
                     warnings.warn('Using calibration value from JSON file for '
-                                  f'{tr.id}.')
+                                  f'{tr.id}.', CollectionWarning)
                 except KeyError:
                     print('No calibration value available for {tr.id}. '
                           'Stopping.')
@@ -429,7 +431,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                 print('--------------')
                 for sta in remaining_failed:
                     warnings.warn(f'Station {sta} found in radius search but '
-                                  'no data found.')
+                                  'no data found.', CollectionWarning)
 
             st_out += avo_st
 
