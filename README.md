@@ -4,18 +4,20 @@ waveform_collection
 Script containing convenience functions to collect seismic/infrasound waveforms
 and metadata from IRIS/WATC/AVO servers or local miniSEED files.
 
-
 Installation
 ------------
-This package can be installed using python [setuptools](https://pypi.org/project/setuptools/),
-which allows installation into your environment by your preferred method. For example,
-[pip](https://pypi.org/project/pip/) can be used.
-
+To use _waveform_collection_, first clone or download this repository. Then the
+script can be installed using Python [`setuptools`](https://pypi.org/project/setuptools/),
+which allows for installation into your chosen environment by your preferred
+method. For example, installing with [pip](https://pypi.org/project/pip/) into a
+pre-existing conda environment:
 ```
-cd waveform_collection
-pip install .
+$ conda activate my_env
+$ cd /path/to/waveform_collection
+$ pip install .
 ```
-
+With this method, dependencies (detailed below) are automatically installed if
+required.
 
 Dependencies
 ------------
@@ -27,23 +29,10 @@ Python packages:
 ...and its dependencies, which you don't really have to be concerned about if
 you're using [conda](https://docs.conda.io/projects/conda/en/latest/index.html)!
 
-It's recommended that you create a new conda environment to use with this
-repository:
-```
-conda create -n waveform_collection -c conda-forge obspy
-```
-
 Usage
 -----
 
-To use _waveform_collection_, clone or download this repository and add it to
-your `PYTHONPATH`, e.g. in a script where you'd like to use
-_waveform_collection_:
-```python
-import sys
-sys.path.append('/path/to/waveform_collection')
-```
-Then you can access package functions with (for example)
+Access the script's functions with (for example)
 ```python
 from waveform_collection import gather_waveforms
 ```

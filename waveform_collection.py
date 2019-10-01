@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 from obspy.clients.fdsn import Client as FDSN_Client
 from obspy.clients.earthworm import Client as EW_Client
 from obspy.clients.fdsn.header import FDSNNoDataException
@@ -15,7 +12,7 @@ import warnings
 
 
 # Get location of folder containing this script
-dirname = os.path.join(os.path.dirname(__file__), '..')
+dirname = os.path.dirname(__file__)
 
 # Load AVO infrasound station calibration values (units are Pa/ct)
 with open(os.path.join(dirname, 'avo_json', 'avo_infra_calibs.json')) as f:
