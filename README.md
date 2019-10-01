@@ -14,7 +14,7 @@ pre-existing conda environment:
 ```
 $ conda activate my_env
 $ cd /path/to/waveform_collection
-$ pip install .
+$ pip install -e .
 ```
 With this method, dependencies (detailed below) are automatically installed if
 required.
