@@ -3,3 +3,18 @@ watc_credentials.json
 
 # Ignore PyCharm project settings folder
 .idea/
+
+# OS X Finder things
+**/.DS_Store
+**/._.DS_Store
+
+# python setup and runtime thigns
+**/__pycache__
+build/
+dist/
+*egg-info
+
+# temporary/swap files from text editors
+**/*~
+**/*.swp
+**/._*

@@ -4,6 +4,19 @@ waveform_collection
 Script containing convenience functions to collect seismic/infrasound waveforms
 and metadata from IRIS/WATC/AVO servers or local miniSEED files.
 
+
+Installation
+------------
+This package can be installed using python [setuptools](https://pypi.org/project/setuptools/),
+which allows installation into your environment by your preferred method. For example,
+[pip](https://pypi.org/project/pip/) can be used.
+
+```
+cd waveform_collection
+pip install .
+```
+
+
 Dependencies
 ------------
 
@@ -43,4 +56,5 @@ Authors
 (_Alphabetical order by last name._)
 
 David Fee  
-Liam Toney
+Liam Toney  
+Andrew Winkelman
