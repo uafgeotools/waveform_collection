@@ -272,11 +272,6 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         enough extra data to account for the time required for an infrasound
         signal to propagate to the farthest station.
 
-    NOTE 3:
-        Regardless of network/station/location/channel constraints, all of the
-        stations in `avo_coords.json` are always added to the requested station
-        list.
-
     Args:
         lon_0: [deg] Longitude of search center
         lat_0: [deg] Latitude of search center
@@ -356,10 +351,19 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
     # Loop through each entry in AVO station coordinates JSON file
     for tr_id, coord in AVO_COORDS.items():
-        dist, _, _ = gps2dist_azimuth(lat_0, lon_0, *coord[0:2])  # [m]
-        if dist <= max_radius * KM2M:
-            sta = tr_id.split('.')[1]  # Extract station code from Trace.id
-            requested_station_list.append(sta)
+
+        nw, sta, loc, cha = tr_id.split('.')  # Extract codes from Trace.id
+
+        # Only add station to requested stations list if it satisfies the
+        # user-supplied query restrictions
+        if (_matching([nw], network) and
+                _matching([sta], station) and
+                _matching([loc], location) and
+                _matching([cha], channel)):
+
+            dist, _, _ = gps2dist_azimuth(lat_0, lon_0, *coord[0:2])  # [m]
+            if dist <= max_radius * KM2M:
+                requested_station_list.append(sta)
 
     if not requested_station_list:
         raise ValueError('Station list is empty. Expand the station search '
@@ -517,4 +521,4 @@ def _matching(unique_code_list, requested_codes):
         # Return the subset of unique codes matched by the pattern
         matching_codes += fnmatch.filter(unique_code_list, pattern)
 
-    return matching_codes
+    return np.unique(matching_codes).tolist()
