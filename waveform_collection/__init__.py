@@ -30,5 +30,5 @@ del warnings
 # EXPOSE PUBLIC MODULES
 # -----------------------------------------------------------------------------
 
-from .waveform_collection import gather_waveforms, gather_waveforms_bulk, \
-                                 read_local, INFRASOUND_CHANNELS
+from .server import gather_waveforms, gather_waveforms_bulk, INFRASOUND_CHANNELS
+from .local import read_local
