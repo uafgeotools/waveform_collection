@@ -7,8 +7,8 @@ ENDTIME   = UTCDateTime(2019, 9, 22, 6, 10)
 
 #%% Example 1 - Gather all infrasound records from Dillingham infrasound array
 
-st = gather_waveforms(source='AVO', network='AV', station='SSLN',
-                      location='*', channel='BDF', starttime=STARTTIME,
+st = gather_waveforms(source='IRIS', network='AV', station='DLL',
+                      location='*', channel='*', starttime=STARTTIME,
                       endtime=ENDTIME)
 
 #%% Example 2 - Gather all BHN channel seismic records from within a 200 km radius of Iliamna volcano, Alaska
