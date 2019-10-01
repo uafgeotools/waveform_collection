@@ -10,7 +10,7 @@ To use _waveform_collection_, first clone or download this repository. Then
 create a new [conda](https://docs.conda.io/projects/conda/en/latest/index.html)
 environment with the necessary dependencies (or use a pre-existing one):
 ```
-$ conda env create -n waveform_collection -c conda-forge obspy
+$ conda create -n waveform_collection -c conda-forge obspy
 ```
 Then execute
 ```
