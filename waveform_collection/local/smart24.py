@@ -118,7 +118,7 @@ import obspy
 import numpy as np
 
 
-class smart24:
+class Smart24:
     '''
     read an uncompressed cd11_file produced from a Geotech Smart24 digitizer
     
