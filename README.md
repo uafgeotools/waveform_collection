@@ -2,7 +2,7 @@ waveform_collection
 ===================
 
 Package containing convenience functions to collect seismic/infrasound waveforms
-and metadata from IRIS/WATC/AVO servers or local miniSEED files.
+and metadata from IRIS/WATC/AVO servers or local files (miniSEED, etc.).
 
 Installation
 ------------
