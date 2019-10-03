@@ -112,10 +112,10 @@ Explaination of function:
 '''
 
 
-import os
 import struct
 import obspy
 import numpy as np
+from .common import check_file_exists, check_file_extension
 
 
 class Smart24:
@@ -189,11 +189,8 @@ class Smart24:
     def _test_file(self, extension):
         '''Test if cd11_file exists and has '.cd11' file extension'''
         
-        f = os.path.abspath(self.cd11_file)
-        assert os.path.isfile(self.cd11_file), \
-            "Error, file {} doesn't appear to exist".format(f)
-        assert os.path.splitext(self.cd11_file)[-1] == extension, \
-            "Error, file {} doesn't appear to have the '{}' file extension".format(f, extension)
+        assert check_file_exists(self.cd11_file)
+        assert check_file_extension(self.cd11_file, '.cd11')
     
     
     def _read_binary_cd11_file(self):
