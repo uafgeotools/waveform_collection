@@ -7,7 +7,8 @@ import numpy as np
 import os
 import fnmatch
 import warnings
-from . import CollectionWarning, load_json_file
+from . import CollectionWarning
+from .local.common import load_json_file
 
 
 # Get location of AVO JSON files
