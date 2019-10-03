@@ -15,7 +15,7 @@ the packages listed in the [Dependencies](#dependencies) section.)
 To create a new conda environment for use with this and other _uafgeotools_
 packages, execute the following terminal command:
 ```
-$ conda env create -n uafinfra -c conda-forge obspy
+$ conda create -n uafinfra -c conda-forge obspy
 ```
 This creates a new environment called `uafinfra` with ObsPy and its dependencies
 installed.
