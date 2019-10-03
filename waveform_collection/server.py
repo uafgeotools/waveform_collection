@@ -68,9 +68,8 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         time_buffer: [s] Extra amount of data to download after endtime
                      (default: 0)
         merge: Toggle merging of Traces with identical IDs (default: True)
-        remove_response: Toggle response removal via remove_sensitivity() if
-                         available, else just do a simple scalar multiplication
-                         (default: False)
+        remove_response: Toggle response removal via remove_sensitivity() or a
+                         simple scalar multiplication (default: False)
         return_failed_stations: If True, returns a list of station codes that
                                 were requested but not downloaded. This
                                 disables the standard failed station warning
@@ -100,7 +99,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             st_out = iris_client.get_waveforms(network, station, location,
                                                channel, starttime,
                                                endtime + time_buffer,
-                                               attach_response=remove_response)
+                                               attach_response=True)
         except FDSNNoDataException:
             st_out = Stream()  # Just create an empty Stream object
 
@@ -117,7 +116,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             st_out = watc_client.get_waveforms(network, station, location,
                                                channel, starttime,
                                                endtime + time_buffer,
-                                               attach_response=remove_response)
+                                               attach_response=True)
         except FDSNNoDataException:
             st_out = Stream()  # Just create an empty Stream object
 
@@ -284,9 +283,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         time_buffer: [s] Extra amount of data to download after endtime
                      (default: 0)
         merge: Toggle merging of Traces with identical IDs (default: True)
-        remove_response: Toggle conversion to Pa via remove_sensitivity() if
-                         available, else just do a simple scalar multiplication
-                         (default: False)
+        remove_response: Toggle response removal via remove_sensitivity() or a
+                         simple scalar multiplication (default: False)
         watc_username: Username for WATC FDSN server (default: None)
         watc_password: Password for WATC FDSN server (default: None)
     Returns:
