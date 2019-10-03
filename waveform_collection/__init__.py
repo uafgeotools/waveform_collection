@@ -31,4 +31,4 @@ del warnings
 # -----------------------------------------------------------------------------
 
 from .server import gather_waveforms, gather_waveforms_bulk, INFRASOUND_CHANNELS
-from . import local
+from .local import read_local, Smart24
