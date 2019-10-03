@@ -5,22 +5,20 @@ from obspy.geodetics import gps2dist_azimuth
 from obspy import Stream
 import numpy as np
 import os
-import json
 import fnmatch
 import warnings
-from . import CollectionWarning
+from . import CollectionWarning, load_json_file
 
 
 # Get location of AVO JSON files
 json_dir = os.path.join(os.path.dirname(__file__), '..', 'avo_json')
 
 # Load AVO infrasound station calibration values (units are Pa/ct)
-with open(os.path.join(json_dir, 'avo_infra_calibs.json')) as f:
-    AVO_INFRA_CALIBS = json.load(f)
+AVO_INFRA_CALIBS = load_json_file(os.path.join(json_dir,
+                                               'avo_infra_calibs.json'))
 
 # Load AVO station coordinates (elevation units are meters)
-with open(os.path.join(json_dir, 'avo_coords.json')) as f:
-    AVO_COORDS = json.load(f)
+AVO_COORDS = load_json_file(os.path.join(json_dir, 'avo_coords.json'))
 
 # Define IRIS and AVO clients (define WATC client within function)
 iris_client = FDSN_Client('IRIS')

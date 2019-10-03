@@ -1,7 +1,7 @@
 from obspy import Stream, read, UTCDateTime
 import glob
-import json
 import os
+from .common import load_json_file
 
 
 # Define some conversion factors
@@ -91,8 +91,7 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     print('Assigning coordinates...')
 
     # Assign coordinates by searching through user-supplied JSON file
-    with open(coord_file) as f:
-        local_coords = json.load(f)
+    local_coords = load_json_file(coord_file)
     for tr in st_out:
         try:
             tr.stats.latitude, tr.stats.longitude,\
