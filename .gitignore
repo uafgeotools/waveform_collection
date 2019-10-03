@@ -1,7 +1,7 @@
-# Ignore JSON file containing WATC VPN username and password
+# JSON file containing WATC VPN username and password
 watc_credentials.json
 
-# Ignore PyCharm project settings folder
+# PyCharm project settings folder
 .idea/
 
 # macOS Finder things
