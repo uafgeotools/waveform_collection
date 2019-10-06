@@ -15,8 +15,7 @@ from .local.common import load_json_file
 json_dir = os.path.join(os.path.dirname(__file__), '..', 'avo_json')
 
 # Load AVO infrasound station calibration values (units are Pa/ct)
-AVO_INFRA_CALIBS = load_json_file(os.path.join(json_dir,
-                                               'avo_infra_calibs.json'))
+AVO_INFRA_CALIBS = load_json_file(os.path.join(json_dir, 'avo_infra_calibs.json'))
 
 # Load AVO station coordinates (elevation units are meters)
 AVO_COORDS = load_json_file(os.path.join(json_dir, 'avo_coords.json'))
@@ -43,10 +42,6 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     Optionally remove the sensitivity.
 
     NOTE 1:
-        WATC database will NOT be used for station search NOR data download
-        unless BOTH watc_username and watc_password are set.
-
-    NOTE 2:
         Usual RTM usage is to specify a starttime/endtime that brackets the
         estimated source origin time. Then time_buffer is used to download
         enough extra data to account for the time required for an infrasound
@@ -177,13 +172,22 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 
     print('Assigning coordinates...')
 
-    # Assign coordinates using IRIS FDSN regardless of data source
+    # Assign coordinates using IRIS or WATC FDSN depending on data source
     try:
-        inv = iris_client.get_stations(network=network, station=station,
-                                       location=location, channel=channel,
-                                       starttime=starttime,
-                                       endtime=endtime + time_buffer,
-                                       level='channel')
+
+        # WATC data source uses WATC inventory info
+        if source == 'WATC':
+            client = watc_client
+        # IRIS or AVO data sources use IRIS inventory info
+        else:
+            client = iris_client
+
+        inv = client.get_stations(network=network, station=station,
+                                  location=location, channel=channel,
+                                  starttime=starttime,
+                                  endtime=endtime + time_buffer,
+                                  level='channel')
+
     except FDSNNoDataException:
         inv = []
 
