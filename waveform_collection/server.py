@@ -34,7 +34,7 @@ SEC2MIN = 1/60  # [min/s]
 
 def gather_waveforms(source, network, station, location, channel, starttime,
                      endtime, time_buffer=0, merge=True, remove_response=False,
-                     return_failed_stations=False, watc_username=None,
+                     return_failed_stations=False, watc_url=None, watc_username=None,
                      watc_password=None):
     """
     Gather seismic/infrasound waveforms from IRIS or WATC FDSN, or AVO Winston,
@@ -69,6 +69,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                                 were requested but not downloaded. This
                                 disables the standard failed station warning
                                 message (default: False)
+        watc_url:      URL for WATC FDSN server (default: None)
         watc_username: Username for WATC FDSN server (default: None)
         watc_password: Password for WATC FDSN server (default: None)
     Returns:
@@ -102,7 +103,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     elif source == 'WATC':
 
         print('Connecting to WATC FDSN...')
-        watc_client = FDSN_Client('http://10.30.5.10:8080',
+        watc_client = FDSN_Client(base_url=watc_url,
                                   user=watc_username,
                                   password=watc_password)
 
@@ -256,7 +257,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                           channel, network='*', station='*', location='*',
                           time_buffer=0, merge=True, remove_response=False,
-                          watc_username=None, watc_password=None):
+                          watc_url=None, watc_username=None, watc_password=None):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
@@ -289,6 +290,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         merge: Toggle merging of Traces with identical IDs (default: True)
         remove_response: Toggle response removal via remove_sensitivity() or a
                          simple scalar multiplication (default: False)
+        watc_url:      URL for WATC FDSN server (default: None)
         watc_username: Username for WATC FDSN server (default: None)
         watc_password: Password for WATC FDSN server (default: None)
     Returns:
@@ -321,7 +323,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     if watc_username and watc_password:
 
         print('Connecting to WATC FDSN...')
-        watc_client = FDSN_Client('http://10.30.5.10:8080', user=watc_username,
+        watc_client = FDSN_Client(base_url=watc_url, user=watc_username,
                                   password=watc_password)
         print('Successfully connected.')
 
