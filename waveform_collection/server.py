@@ -303,8 +303,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     inventories = []  # Create empty list of inventories
 
     # Grab IRIS inventory
+    iris_client = FDSN_Client('IRIS')
     try:
-        iris_client = FDSN_Client('IRIS')
         iris_inv = iris_client.get_stations(starttime=starttime,
                                             endtime=endtime + time_buffer,
                                             network=network, station=station,
