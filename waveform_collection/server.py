@@ -11,21 +11,9 @@ from . import CollectionWarning
 from .local.common import load_json_file
 
 
-# Get location of AVO JSON files
-json_dir = os.path.join(os.path.dirname(__file__), '..', 'avo_json')
-
-# Load AVO infrasound station calibration values (units are Pa/ct)
-AVO_INFRA_CALIBS = load_json_file(os.path.join(json_dir, 'avo_infra_calibs.json'))
-
-# Load AVO station coordinates (elevation units are meters)
-AVO_COORDS = load_json_file(os.path.join(json_dir, 'avo_coords.json'))
-
-# Define IRIS and AVO clients (define WATC client within function)
-iris_client = FDSN_Client('IRIS')
-avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
-
 # Default infrasound channels - covering all the bases here!
 INFRASOUND_CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
+
 
 # Define some conversion factors
 KM2M = 1000     # [m/km]
@@ -90,6 +78,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     # IRIS FDSN
     if source == 'IRIS':
 
+        iris_client = FDSN_Client('IRIS')
         print('Reading data from IRIS FDSN...')
         try:
             st_out = iris_client.get_waveforms(network, station, location,
@@ -119,6 +108,14 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     # AVO Winston
     elif source == 'AVO':
 
+        # Get location of AVO JSON files
+        json_dir = os.path.join(os.path.dirname(__file__), '..', 'avo_json')
+        # Load AVO infrasound station calibration values (units are Pa/ct)
+        AVO_INFRA_CALIBS = load_json_file(os.path.join(json_dir, 'avo_infra_calibs.json'))
+        # Load AVO station coordinates (elevation units are meters)
+        AVO_COORDS = load_json_file(os.path.join(json_dir, 'avo_coords.json'))
+
+        avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
         print('Reading data from AVO Winston...')
         st_out = Stream()  # Make empty Stream object to populate
 
