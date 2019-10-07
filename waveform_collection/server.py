@@ -304,6 +304,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
     # Grab IRIS inventory
     try:
+        iris_client = FDSN_Client('IRIS')
         iris_inv = iris_client.get_stations(starttime=starttime,
                                             endtime=endtime + time_buffer,
                                             network=network, station=station,
@@ -350,6 +351,11 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                         requested_station_list.append(stn.code)
 
     # Loop through each entry in AVO station coordinates JSON file
+    # Get location of AVO JSON files
+    json_dir = os.path.join(os.path.dirname(__file__), '..', 'avo_json')
+    # Load AVO station coordinates (elevation units are meters)
+    AVO_COORDS = load_json_file(os.path.join(json_dir, 'avo_coords.json'))
+
     for tr_id, coord in AVO_COORDS.items():
 
         nw, sta, loc, cha = tr_id.split('.')  # Extract codes from Trace.id
