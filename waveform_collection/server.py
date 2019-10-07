@@ -11,21 +11,9 @@ from . import CollectionWarning
 from .local.common import load_json_file
 
 
-# Get location of AVO JSON files
-json_dir = os.path.join(os.path.dirname(__file__), '..', 'avo_json')
-
-# Load AVO infrasound station calibration values (units are Pa/ct)
-AVO_INFRA_CALIBS = load_json_file(os.path.join(json_dir, 'avo_infra_calibs.json'))
-
-# Load AVO station coordinates (elevation units are meters)
-AVO_COORDS = load_json_file(os.path.join(json_dir, 'avo_coords.json'))
-
-# Define IRIS and AVO clients (define WATC client within function)
-iris_client = FDSN_Client('IRIS')
-avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
-
 # Default infrasound channels - covering all the bases here!
 INFRASOUND_CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
+
 
 # Define some conversion factors
 KM2M = 1000     # [m/km]
@@ -34,7 +22,7 @@ SEC2MIN = 1/60  # [min/s]
 
 def gather_waveforms(source, network, station, location, channel, starttime,
                      endtime, time_buffer=0, merge=True, remove_response=False,
-                     return_failed_stations=False, watc_username=None,
+                     return_failed_stations=False, watc_url=None, watc_username=None,
                      watc_password=None):
     """
     Gather seismic/infrasound waveforms from IRIS or WATC FDSN, or AVO Winston,
@@ -69,6 +57,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                                 were requested but not downloaded. This
                                 disables the standard failed station warning
                                 message (default: False)
+        watc_url:      URL for WATC FDSN server (default: None)
         watc_username: Username for WATC FDSN server (default: None)
         watc_password: Password for WATC FDSN server (default: None)
     Returns:
@@ -89,6 +78,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     # IRIS FDSN
     if source == 'IRIS':
 
+        iris_client = FDSN_Client('IRIS')
         print('Reading data from IRIS FDSN...')
         try:
             st_out = iris_client.get_waveforms(network, station, location,
@@ -102,7 +92,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     elif source == 'WATC':
 
         print('Connecting to WATC FDSN...')
-        watc_client = FDSN_Client('http://10.30.5.10:8080',
+        watc_client = FDSN_Client(base_url=watc_url,
                                   user=watc_username,
                                   password=watc_password)
 
@@ -118,6 +108,14 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     # AVO Winston
     elif source == 'AVO':
 
+        # Get location of AVO JSON files
+        json_dir = os.path.join(os.path.dirname(__file__), '..', 'avo_json')
+        # Load AVO infrasound station calibration values (units are Pa/ct)
+        AVO_INFRA_CALIBS = load_json_file(os.path.join(json_dir, 'avo_infra_calibs.json'))
+        # Load AVO station coordinates (elevation units are meters)
+        AVO_COORDS = load_json_file(os.path.join(json_dir, 'avo_coords.json'))
+
+        avo_client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
         print('Reading data from AVO Winston...')
         st_out = Stream()  # Make empty Stream object to populate
 
@@ -256,7 +254,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                           channel, network='*', station='*', location='*',
                           time_buffer=0, merge=True, remove_response=False,
-                          watc_username=None, watc_password=None):
+                          watc_url=None, watc_username=None, watc_password=None):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
@@ -289,6 +287,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         merge: Toggle merging of Traces with identical IDs (default: True)
         remove_response: Toggle response removal via remove_sensitivity() or a
                          simple scalar multiplication (default: False)
+        watc_url:      URL for WATC FDSN server (default: None)
         watc_username: Username for WATC FDSN server (default: None)
         watc_password: Password for WATC FDSN server (default: None)
     Returns:
@@ -305,6 +304,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
     # Grab IRIS inventory
     try:
+        iris_client = FDSN_Client('IRIS')
         iris_inv = iris_client.get_stations(starttime=starttime,
                                             endtime=endtime + time_buffer,
                                             network=network, station=station,
@@ -321,7 +321,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     if watc_username and watc_password:
 
         print('Connecting to WATC FDSN...')
-        watc_client = FDSN_Client('http://10.30.5.10:8080', user=watc_username,
+        watc_client = FDSN_Client(base_url=watc_url, user=watc_username,
                                   password=watc_password)
         print('Successfully connected.')
 
@@ -351,6 +351,11 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                         requested_station_list.append(stn.code)
 
     # Loop through each entry in AVO station coordinates JSON file
+    # Get location of AVO JSON files
+    json_dir = os.path.join(os.path.dirname(__file__), '..', 'avo_json')
+    # Load AVO station coordinates (elevation units are meters)
+    AVO_COORDS = load_json_file(os.path.join(json_dir, 'avo_coords.json'))
+
     for tr_id, coord in AVO_COORDS.items():
 
         nw, sta, loc, cha = tr_id.split('.')  # Extract codes from Trace.id
