@@ -4,7 +4,6 @@ from .common import check_file_exists, check_file_extension
 from os.path import splitext
 from obspy import UTCDateTime
 from datetime import datetime
-import pytz
 import os
 from glob import glob
 
