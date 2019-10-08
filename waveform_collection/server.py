@@ -120,10 +120,10 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         st_out = Stream()  # Make empty Stream object to populate
 
         # Brute-force "dynamic grid search" over network/station/channel/location codes
-        for nw in _restricted_matching('network', network):
-            for sta in _restricted_matching('station', station, network=nw):
-                for cha in _restricted_matching('channel', channel, network=nw, station=sta):
-                    for loc in _restricted_matching('location', location, network=nw, station=sta, channel=cha):
+        for nw in _restricted_matching('network', network, avo_client):
+            for sta in _restricted_matching('station', station, avo_client, network=nw):
+                for cha in _restricted_matching('channel', channel, avo_client, network=nw, station=sta):
+                    for loc in _restricted_matching('location', location, avo_client, network=nw, station=sta, channel=cha):
                         try:
                             st_out += avo_client.get_waveforms(nw, sta, loc, cha, starttime, endtime + time_buffer)
                         except KeyError:
@@ -457,7 +457,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     return st_out
 
 
-def _restricted_matching(code_type, requested_codes, **restriction_kwargs):
+def _restricted_matching(code_type, requested_codes, avo_client,
+                         **restriction_kwargs):
     """
     Find all SEED network/station/location/channel codes on AVO Winston that
     match a user-supplied query string. Optionally constrain the search to a
@@ -467,6 +468,7 @@ def _restricted_matching(code_type, requested_codes, **restriction_kwargs):
     Args:
         code_type: One of 'network', 'station', 'location', or 'channel'
         requested_codes: Comma-separated SEED code string (wildcards accepted)
+        avo_client: AVO Winston client instance
         **restriction_kwargs: Query restrictions to be passed on to
                               `avo_client.get_availability()`
     Returns:
