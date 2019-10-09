@@ -19,10 +19,13 @@ Explaination of function:
     frame header is a single channel subframe header, Followed channel subframes
     each containing a minute of data.
     
-    Fields follow the IEEE standard for numerical representation. This implies 
-    forward, or big-endian, byte ordering of multibyte values. Additionally, all
-    variable-length fields that are not a multiple of four bytes long are padded
-    to the next multiple of four with with trailing null (0) bytes.
+    According to the CD-1.1 Continuous Data specification, fields follow the IEEE
+    standard for numerical representation. This implies forward, or big-endian,
+    byte ordering of multibyte values. However, it has been found that the Geotech
+    implementation of the CD-1.1-like data format uses little-endian byte ordering.
+    This has been observed for the "s4" channel data type and may be true for others.
+    Additionally, all variable-length fields that are not a multiple of four bytes
+    long are padded to the next multiple of four with with trailing null (0) bytes.
     
     Frame header:
         Field                   Format      Number      Description
@@ -449,7 +452,7 @@ class Smart24:
         '''builds obspy.Stream object containing waveform data'''
         
         DTYPE = {# Big-endian integers
-                 's4': '>i',
+                 's4': '<i',
                  's2': '>h',
                  # Little-endian integers
                  'i4': '<i',
