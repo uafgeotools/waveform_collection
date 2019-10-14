@@ -88,6 +88,11 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     # Add zeros to ensure all Traces have same length
     st_out.trim(starttime, endtime, pad=True, fill_value=0)
 
+    # #remove numerical outliers and replace with 0
+    import numpy
+    st_out[0].data[numpy.where(st_out[0].data>1e19)] = 0
+
+
     print('Assigning coordinates...')
 
     # Assign coordinates by searching through user-supplied JSON file
