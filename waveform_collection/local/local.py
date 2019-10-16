@@ -90,7 +90,9 @@ def read_local(data_dir, coord_file, network, station, location, channel,
 
     # #remove numerical outliers and replace with 0
     import numpy
-    st_out[0].data[numpy.where(st_out[0].data>1e19)] = 0
+    d0 =numpy.where(st_out[0].data>1e19)
+    st_out[0].data[d0] = 0
+    print(str(len(d0))+ ' data points were outliers with >1e19 and set to 0')
 
 
     print('Assigning coordinates...')
