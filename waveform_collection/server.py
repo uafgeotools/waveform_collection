@@ -41,9 +41,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         Usual RTM usage is to specify a starttime/endtime that brackets the
         estimated source origin time. Then time_buffer is used to download
         enough extra data to account for the time required for an infrasound
-        signal to propagate to the farthest station. Because this buffer is so
-        critical, this function issues a warning if it remains set to its
-        default of 0 s.
+        signal to propagate to the farthest station.
 
     Args:
         source: Which source to gather waveforms from - options are:
@@ -77,11 +75,6 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     print('--------------')
     print('GATHERING DATA')
     print('--------------')
-
-    # Warn if buffer is set to 0 s
-    if time_buffer == 0:
-        warnings.warn('Time buffer is set to 0 seconds. Are you sure you\'ve '
-                      'downloaded enough data for RTM?', CollectionWarning)
 
     # IRIS FDSN
     if source == 'IRIS':
