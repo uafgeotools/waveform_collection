@@ -392,6 +392,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                     time_buffer=time_buffer,
                                                     remove_response=remove_response,
                                                     return_failed_stations=True,
+                                                    watc_url=watc_url,
                                                     watc_username=watc_username,
                                                     watc_password=watc_password)
         else:
