@@ -1,6 +1,8 @@
 waveform_collection
 ===================
 
+[![](https://readthedocs.org/projects/uaf-waveform-collection/badge/?version=doc)](https://uaf-waveform-collection.readthedocs.io/)
+
 Package containing convenience functions to collect seismic/infrasound waveforms
 and metadata from IRIS/WATC/AVO servers or local files (miniSEED, etc.).
 
@@ -44,12 +46,15 @@ you're using conda!
 Usage
 -----
 
+Documentation is available online
+[here](https://uaf-waveform-collection.readthedocs.io/).
+
 Access the package's functions with (for example)
 ```python
 from waveform_collection import gather_waveforms
 ```
-and so on. Currently, documentation only exists in function docstrings. For a
-usage example, see [`example.py`](https://github.com/uafgeotools/waveform_collection/blob/master/example.py).
+and so on. For a usage example, see
+[`example.py`](https://github.com/uafgeotools/waveform_collection/blob/master/example.py).
 
 Authors
 -------
