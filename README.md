@@ -49,13 +49,13 @@ Access the package's functions with (for example)
 from waveform_collection import gather_waveforms
 ```
 and so on. Currently, documentation only exists in function docstrings. For a
-usage example, see [`example.py`](example.py).
+usage example, see [`example.py`](https://github.com/uafgeotools/waveform_collection/blob/master/example.py).
 
 Authors
 -------
 
 (_Alphabetical order by last name._)
 
-David Fee  
-Liam Toney  
+David Fee<br>
+Liam Toney<br>
 Andrew Winkelman
