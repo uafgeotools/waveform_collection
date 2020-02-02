@@ -12,5 +12,5 @@ setup(
       name='waveform_collection',
       packages=find_packages(),
       install_requires=INSTALL_REQUIRES
-      #package_data={'': ['../avo_json/*.json']},
+      package_data={'': ['../avo_json/*.json']},
       )
