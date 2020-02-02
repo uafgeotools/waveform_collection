@@ -42,7 +42,8 @@ apidoc_toc_file = False
 apidoc_excluded_paths = ['local/cd11.py',
                          'local/clf.py',
                          'local/css.py',
-                         'local/smart24.py']
+                         'local/smart24.py'
+                         ]
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
