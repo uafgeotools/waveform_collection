@@ -15,5 +15,5 @@ setup(
       packages=find_packages(),
       install_requires=INSTALL_REQUIRES,
       package_data={'': ['../avo_json/*.json']},
-      include_package_data=INCLUDE_PACKAGE_DATA
+      include_package_data=False#INCLUDE_PACKAGE_DATA
       )
