@@ -18,3 +18,7 @@ dist/
 **/*~
 **/*.swp
 **/._*
+
+# Documentation things
+doc/_build/
+doc/api/

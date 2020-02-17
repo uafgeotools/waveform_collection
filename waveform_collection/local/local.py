@@ -12,30 +12,37 @@ def read_local(data_dir, coord_file, network, station, location, channel,
                starttime, endtime, merge=True):
     """
     Read in waveforms from "local" 1-hour, IRIS-compliant miniSEED files, and
-    output a Stream object with station/element coordinates attached.
+    output a :class:`~obspy.core.stream.Stream` with station/element coordinates
+    attached.
 
-    NOTE 1:
-        The expected naming convention for the miniSEED files is:
-        <network>.<station>.<location>.<channel>.<year>.<julian_day>.<hour>
+    **NOTE 1**
 
-    NOTE 2:
-        This function assumes that the response has been removed from the
-        waveforms in the input miniSEED files.
+    The expected naming convention for the miniSEED files is
+
+    ``<network>.<station>.<location>.<channel>.<year>.<julian_day>.<hour>``
+
+    **NOTE 2**
+
+    This function assumes that the response has been removed from the waveforms
+    in the input miniSEED files.
 
     Args:
-        data_dir: Directory containing miniSEED files
-        coord_file: JSON file containing coordinates for local stations (full
-                    path required)
-        network: SEED network code [wildcards (*, ?) accepted]
-        station: SEED station code [wildcards (*, ?) accepted]
-        location: SEED location code [wildcards (*, ?) accepted]
-        channel: SEED channel code [wildcards (*, ?) accepted]
-        starttime: Start time for data request (UTCDateTime)
-        endtime: End time for data request (UTCDateTime)
-        merge: Toggle merging of Traces with identical IDs (default: True)
+        data_dir (str): Directory containing miniSEED files
+        coord_file (str): JSON file containing coordinates for local stations
+            (full path required)
+        network (str): SEED network code [wildcards (``*``, ``?``) accepted]
+        station (str): SEED station code [wildcards (``*``, ``?``) accepted]
+        location (str): SEED location code [wildcards (``*``, ``?``) accepted]
+        channel (str): SEED channel code [wildcards (``*``, ``?``) accepted]
+        starttime (:class:`~obspy.core.utcdatetime.UTCDateTime`): Start time for
+            data request
+        endtime (:class:`~obspy.core.utcdatetime.UTCDateTime`): End time for
+            data request
+        merge (bool): Toggle merging of :class:`~obspy.core.trace.Trace` objects
+            with identical IDs
 
     Returns:
-        st_out: Stream containing gathered waveforms
+        :class:`~obspy.core.stream.Stream` containing gathered waveforms
     """
 
     print('-----------------------------')
