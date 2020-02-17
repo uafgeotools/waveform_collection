@@ -1,7 +1,7 @@
 waveform_collection
 ===================
 
-[![](https://readthedocs.org/projects/uaf-waveform-collection/badge/?version=doc)](https://uaf-waveform-collection.readthedocs.io/)
+[![](https://readthedocs.org/projects/uaf-waveform-collection/badge/?version=master)](https://uaf-waveform-collection.readthedocs.io/)
 
 Package containing convenience functions to collect seismic/infrasound waveforms
 and metadata from IRIS/WATC/AVO servers or local files (miniSEED, etc.).
