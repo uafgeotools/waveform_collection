@@ -62,5 +62,6 @@ Authors
 (_Alphabetical order by last name._)
 
 David Fee<br>
+Julia Gestrich<br>
 Liam Toney<br>
 Andrew Winkelman

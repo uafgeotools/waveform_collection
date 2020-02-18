@@ -4,8 +4,9 @@ import os
 from .common import load_json_file
 
 
-# Define some conversion factors
 HR2SEC = 3600   # [s/hr]
+OUTLIER_THRESHOLD = 1e19  # [Pa] Units of Pa since we're assuming response
+                          # already removed
 
 
 def read_local(data_dir, coord_file, network, station, location, channel,
@@ -94,6 +95,13 @@ def read_local(data_dir, coord_file, network, station, location, channel,
 
     # Add zeros to ensure all Traces have same length
     st_out.trim(starttime, endtime, pad=True, fill_value=0)
+
+    # Replace numerical outliers with zeroes
+    for tr in st_out:
+        d0 = numpy.where(tr.data > OUTLIER_THRESHOLD)[0]
+        tr.data[d0] = 0
+        print(f'{len(d0)} data points in {tr.id} were outliers with values > '
+              f'{OUTLIER_THRESHOLD} and are now set to 0')
 
     print('Assigning coordinates...')
 
