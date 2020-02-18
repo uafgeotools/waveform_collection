@@ -34,42 +34,49 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                      watc_username=None, watc_password=None):
     """
     Gather seismic/infrasound waveforms from IRIS or WATC FDSN, or AVO Winston,
-    and output a Stream object with station/element coordinates attached.
-    Optionally remove the sensitivity.
+    and output a :class:`~obspy.core.stream.Stream` with station/element
+    coordinates attached. Optionally remove the sensitivity.
 
-    NOTE 1:
-        Usual RTM usage is to specify a starttime/endtime that brackets the
-        estimated source origin time. Then time_buffer is used to download
-        enough extra data to account for the time required for an infrasound
-        signal to propagate to the farthest station.
+    **NOTE**
+
+    Usual RTM usage is to specify a starttime/endtime that brackets the
+    estimated source origin time. Then time_buffer is used to download enough
+    extra data to account for the time required for an infrasound signal to
+    propagate to the farthest station.
 
     Args:
-        source: Which source to gather waveforms from - options are:
-                'IRIS' <-- IRIS FDSN
-                'WATC' <-- WATC FDSN
-                'AVO'  <-- AVO Winston
-        network: SEED network code
-        station: SEED station code
-        location: SEED location code
-        channel: SEED channel code
-        starttime: Start time for data request (UTCDateTime)
-        endtime: End time for data request (UTCDateTime)
-        time_buffer: [s] Extra amount of data to download after endtime
-                     (default: 0)
-        merge: Toggle merging of Traces with identical IDs (default: True)
-        remove_response: Toggle response removal via remove_sensitivity() or a
-                         simple scalar multiplication (default: False)
-        return_failed_stations: If True, returns a list of station codes that
-                                were requested but not downloaded. This
-                                disables the standard failed station warning
-                                message (default: False)
-        watc_url: URL for WATC FDSN server (default: None)
-        watc_username: Username for WATC FDSN server (default: None)
-        watc_password: Password for WATC FDSN server (default: None)
+        source (str): Which source to gather waveforms from. Options are:
+
+            * `'IRIS'` – IRIS FDSN
+            * `'WATC'` – WATC FDSN
+            * `'AVO'` – AVO Winston
+
+        network (str): SEED network code [wildcards (``*``, ``?``) accepted]
+        station (str): SEED station code [wildcards (``*``, ``?``) accepted]
+        location (str): SEED location code [wildcards (``*``, ``?``) accepted]
+        channel (str): SEED channel code [wildcards (``*``, ``?``) accepted]
+        starttime (:class:`~obspy.core.utcdatetime.UTCDateTime`): Start time for
+            data request
+        endtime (:class:`~obspy.core.utcdatetime.UTCDateTime`): End time for
+            data request
+        time_buffer (int or float): Extra amount of data to download after
+            `endtime` [s]
+        merge (bool): Toggle merging of :class:`~obspy.core.trace.Trace` objects
+            with identical IDs
+        remove_response (bool): Toggle response removal via
+            :meth:`~obspy.core.trace.Trace.remove_sensitivity` or a simple
+            scalar multiplication
+        return_failed_stations (bool): If `True`, returns a list of station
+            codes that were requested but not downloaded. This disables the
+            standard failed station warning message
+        watc_url (str): URL for WATC FDSN server
+        watc_username (str): Username for WATC FDSN server
+        watc_password (str): Password for WATC FDSN server
+
     Returns:
-        st_out: Stream containing gathered waveforms
-        failed_stations: (Optional) List containing station codes that were
-                         requested but not downloaded
+        :class:`~obspy.core.stream.Stream` containing gathered waveforms. If
+        `return_failed_stations` is `True`, additionally returns a list
+        containing station codes that were requested but not downloaded
     """
 
     print('--------------')
@@ -242,40 +249,50 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
-    FDSN, and AVO Winston. Outputs a Stream object with station/element
-    coordinates attached. Optionally removes the sensitivity. [Output Stream
-    has the same properties as output Stream from gather_waveforms().]
+    FDSN, and AVO Winston. Outputs a :class:`~obspy.core.stream.Stream` with
+    station/element coordinates attached. Optionally removes the sensitivity.
+    (Output :class:`~obspy.core.stream.Stream` has the same properties as output
+    :class:`~obspy.core.stream.Stream` from :func:`gather_waveforms`.)
 
-    NOTE 1:
-        WATC database will NOT be used for station search NOR data download
-        unless BOTH watc_username and watc_password are set.
+    **NOTE 1**
 
-    NOTE 2:
-        Usual RTM usage is to specify a starttime/endtime that brackets the
-        estimated source origin time. Then time_buffer is used to download
-        enough extra data to account for the time required for an infrasound
-        signal to propagate to the farthest station.
+    WATC database will NOT be used for station search NOR data download unless
+    BOTH `watc_username` and `watc_password` are set.
+
+    **NOTE 2**
+
+    Usual RTM usage is to specify a starttime/endtime that brackets the
+    estimated source origin time. Then time_buffer is used to download enough
+    extra data to account for the time required for an infrasound signal to
+    propagate to the farthest station.
 
     Args:
-        lon_0: [deg] Longitude of search center
-        lat_0: [deg] Latitude of search center
-        max_radius: [km] Maximum radius to search for stations within
-        starttime: Start time for data request (UTCDateTime)
-        endtime: End time for data request (UTCDateTime)
-        channel: SEED channel code (REQUIRED PARAMETER!)
-        network: SEED network code (default: '*')
-        station: SEED station code (default: '*')
-        location: SEED location code (default: '*')
-        time_buffer: [s] Extra amount of data to download after endtime
-                     (default: 0)
-        merge: Toggle merging of Traces with identical IDs (default: True)
-        remove_response: Toggle response removal via remove_sensitivity() or a
-                         simple scalar multiplication (default: False)
-        watc_url: URL for WATC FDSN server (default: None)
-        watc_username: Username for WATC FDSN server (default: None)
-        watc_password: Password for WATC FDSN server (default: None)
+        lon_0 (int or float): Longitude of search center [deg.]
+        lat_0 (int or float): Latitude of search center [deg.]
+        max_radius (int or float): Maximum radius to search for stations within
+            [km]
+        starttime (:class:`~obspy.core.utcdatetime.UTCDateTime`): Start time for
+            data request
+        endtime (:class:`~obspy.core.utcdatetime.UTCDateTime`): End time for
+            data request
+        channel (str): SEED channel code [wildcards (``*``, ``?``) accepted]
+            (REQUIRED PARAMETER!)
+        network (str): SEED network code [wildcards (``*``, ``?``) accepted]
+        station (str): SEED station code [wildcards (``*``, ``?``) accepted]
+        location (str): SEED location code [wildcards (``*``, ``?``) accepted]
+        time_buffer (int or float): Extra amount of data to download after
+            `endtime` [s]
+        merge (bool): Toggle merging of :class:`~obspy.core.trace.Trace` objects
+            with identical IDs
+        remove_response (bool): Toggle response removal via
+            :meth:`~obspy.core.trace.Trace.remove_sensitivity` or a simple
+            scalar multiplication
+        watc_url (str): URL for WATC FDSN server
+        watc_username (str): Username for WATC FDSN server
+        watc_password (str): Password for WATC FDSN server
+
     Returns:
-        st_out: Stream containing bulk gathered waveforms
+        :class:`~obspy.core.stream.Stream` containing bulk gathered waveforms
     """
 
     print('-------------------')
@@ -442,19 +459,22 @@ def _restricted_matching(code_type, requested_codes, avo_client,
     Find all SEED network/station/location/channel codes on AVO Winston that
     match a user-supplied query string. Optionally constrain the search to a
     particular network/station/location/channel using keyword arguments passed
-    on to `avo_client.get_availability()`.
+    on to ``avo_client.get_availability()``.
 
     Args:
-        code_type: One of 'network', 'station', 'location', or 'channel'
-        requested_codes: Comma-separated SEED code string (wildcards accepted)
-        avo_client: AVO Winston client instance
+        code_type (str): One of `'network'`, `'station'`, `'location'`, or
+            `'channel'`
+        requested_codes (str): Comma-separated SEED code string (wildcards
+            accepted)
+        avo_client (:class:`~obspy.clients.earthworm.client.Client`): AVO
+            Winston client instance
         **restriction_kwargs: Query restrictions to be passed on to
-                              `avo_client.get_availability()`
+            ``avo_client.get_availability()``
+
     Returns:
-        restricted_matching_codes: A list of SEED codes for `code_type`,
-                                   subject to the query restrictions given in
-                                   `**restriction_kwargs` AND matching the
-                                   patterns in `requested_codes`
+        list: A list of SEED codes for `code_type`, subject to the query
+        restrictions given in `**restriction_kwargs` AND matching the patterns
+        in `requested_codes`
     """
 
     # Get availability on AVO Winston subject to optional network/station/
@@ -488,16 +508,19 @@ def _restricted_matching(code_type, requested_codes, avo_client,
 
 def _matching(unique_code_list, requested_codes):
     """
-    Takes a comma-separated SEED code string (e.g., 'BD?,HDF') and returns the
-    subset of an input list of unique codes (e.g., ['BDF', 'EHZ', 'DDF']) that
-    matches the patterns in the comma-separated SEED code string.
+    Takes a comma-separated SEED code string (e.g., ``'BD?,HDF'``) and returns
+    the subset of an input list of unique codes (e.g.,
+    ``['BDF', 'EHZ', 'DDF']``) that matches the patterns in the comma-separated
+    SEED code string.
 
     Args:
-        unique_code_list: List of unique code strings
-        requested_codes: Comma-separated SEED code string (wildcards accepted)
+        unique_code_list (list): List of unique code strings
+        requested_codes (str): Comma-separated SEED code string (wildcards
+            accepted)
+
     Returns:
-        matching_codes: Subset of `unique_code_list` that matches the patterns
-                        in `requested_codes`
+        list: Subset of `unique_code_list` that matches the patterns in
+        `requested_codes`
     """
 
     matching_codes = []
