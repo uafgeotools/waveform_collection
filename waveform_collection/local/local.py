@@ -4,12 +4,14 @@ import os
 from .common import load_json_file
 import numpy
 
-# Define some conversion factors
+
 HR2SEC = 3600   # [s/hr]
-OUTLIER_THRESHOLD = 1e19
+OUTLIER_THRESHOLD = 1e19  # [Pa] Units of Pa since we're assuming response
+                          # already removed
+
 
 def read_local(data_dir, coord_file, network, station, location, channel,
-               starttime, endtime, merge=True, outlier_threshold=OUTLIER_THRESHOLD):
+               starttime, endtime, merge=True):
     """
     Read in waveforms from "local" 1-hour, IRIS-compliant miniSEED files, and
     output a :class:`~obspy.core.stream.Stream` with station/element coordinates
@@ -95,12 +97,12 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     # Add zeros to ensure all Traces have same length
     st_out.trim(starttime, endtime, pad=True, fill_value=0)
 
-    # #remove numerical outliers and replace with 0
+    # Replace numerical outliers with zeroes
     for tr in st_out:
-        d0 = numpy.where(tr.data>outlier_threshold)[0]
+        d0 = numpy.where(tr.data > OUTLIER_THRESHOLD)[0]
         tr.data[d0] = 0
-        print(f'{len(d0)} data points in {tr.id} were outliers with values >{outlier_threshold} and are now set to 0')
-
+        print(f'{len(d0)} data points in {tr.id} were outliers with values > '
+              f'{OUTLIER_THRESHOLD} and are now set to 0')
 
     print('Assigning coordinates...')
 
