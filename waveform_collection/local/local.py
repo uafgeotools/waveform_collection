@@ -2,7 +2,6 @@ from obspy import Stream, read, UTCDateTime
 import glob
 import os
 from .common import load_json_file
-import numpy
 
 
 HR2SEC = 3600   # [s/hr]
