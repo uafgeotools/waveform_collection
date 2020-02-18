@@ -6,10 +6,10 @@ import numpy
 
 # Define some conversion factors
 HR2SEC = 3600   # [s/hr]
-
+OUTLIER_THRESHOLD = 1e19
 
 def read_local(data_dir, coord_file, network, station, location, channel,
-               starttime, endtime, merge=True, OUTLIER_THRESHOLD=1e19):
+               starttime, endtime, merge=True, outlier_threshold=OUTLIER_THRESHOLD):
     """
     Read in waveforms from "local" 1-hour, IRIS-compliant miniSEED files, and
     output a :class:`~obspy.core.stream.Stream` with station/element coordinates
@@ -96,10 +96,10 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     st_out.trim(starttime, endtime, pad=True, fill_value=0)
 
     # #remove numerical outliers and replace with 0
-
-    d0 =numpy.where(st_out[0].data>OUTLIER_THRESHOLD)[0]
-    st_out[0].data[d0] = 0
-    print(f'{len(d0)} data points were outliers with values >{OUTLIER_THRESHOLD} and are now set to 0')
+    for tr in st_out:
+        d0 = numpy.where(tr.data>outlier_threshold)[0]
+        tr.data[d0] = 0
+        print(f'{len(d0)} data points in {tr.id} were outliers with values >{outlier_threshold} and are now set to 0')
 
 
     print('Assigning coordinates...')
