@@ -100,9 +100,11 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     # Replace numerical outliers with zeroes
     for tr in st_out:
         d0 = np.where(tr.data > OUTLIER_THRESHOLD)[0]
+        if d0.any():
+            print(f'{len(d0)} data points in {tr.id} were outliers with '
+                  f' values > {OUTLIER_THRESHOLD} and are now set to 0')
         tr.data[d0] = 0
-        print(f'{len(d0)} data points in {tr.id} were outliers with values > '
-              f'{OUTLIER_THRESHOLD} and are now set to 0')
+
 
     print('Assigning coordinates...')
 
