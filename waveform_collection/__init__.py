@@ -4,16 +4,16 @@
 
 import warnings
 
-# Subclass UserWarning
+# Subclass UserWarning as a "uafgeotools" warning"
 class CollectionWarning(UserWarning):
-    pass
+    UAFGEOTOOLS = True
 
 # Make warnings more consistent
 warnings.simplefilter(action='always', category=CollectionWarning)
 
-# Make a custom warning format for CollectionWarning instances
+# Make a custom format for "uafgeotools" warnings
 def _formatwarning(message, category, *args, **kwargs):
-    if category == CollectionWarning:
+    if hasattr(category, 'UAFGEOTOOLS'):
         msg = f'{category.__name__}: {message}\n'  # Much cleaner
     else:
         import warnings
