@@ -481,7 +481,7 @@ def _restricted_matching(code_type, requested_codes, avo_client,
     # location/channel restrictions
     inv = np.array(avo_client.get_availability(**restriction_kwargs))
 
-    if inv.size is 0:
+    if inv.size == 0:
         # Nothing available; create empty code container
         all_codes = np.empty((4, 0))
     else:
