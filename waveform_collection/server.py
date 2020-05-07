@@ -21,7 +21,7 @@ AVO_INFRA_CALIBS = load_json_file(os.path.join(json_dir, 'avo_infra_calibs.json'
 AVO_COORDS = load_json_file(os.path.join(json_dir, 'avo_coords.json'))
 
 # Default infrasound channels - covering all the bases here!
-INFRASOUND_CHANNELS = 'BDF,BDG,BDH,BDI,BDJ,BDK,HDF,DDF'
+INFRASOUND_CHANNELS = 'BDF,HDF,CDF,DDF'
 
 # Define some conversion factors
 KM2M = 1000     # [m/km]
