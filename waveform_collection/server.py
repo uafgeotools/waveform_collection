@@ -2,7 +2,7 @@ from obspy.clients.fdsn import Client as FDSN_Client
 from obspy.clients.earthworm import Client as EW_Client
 from obspy.clients.fdsn.header import FDSNNoDataException
 from obspy.geodetics import gps2dist_azimuth
-from obspy import Stream
+from obspy import Inventory, Stream
 import numpy as np
 import os
 import fnmatch
@@ -178,21 +178,21 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                                   endtime=endtime + time_buffer,
                                   level='channel')
     except FDSNNoDataException:
-        inv = []
+        inv = Inventory()  # Make an empty inv
+        warnings.warn('Creating empty inventory.', CollectionWarning)
 
     for tr in st_out:
-        for nw in inv:
-            for sta in nw:
-                for cha in sta:
-                    # Being very thorough to check if everything matches!
-                    if (tr.stats.network == nw.code and
-                            tr.stats.station == sta.code and
-                            tr.stats.location == cha.location_code and
-                            tr.stats.channel == cha.code):
-
-                        tr.stats.longitude = cha.longitude
-                        tr.stats.latitude = cha.latitude
-                        tr.stats.elevation = cha.elevation
+        try:
+            coords = inv.get_coordinates(tr.id)
+            tr.stats.longitude = coords['longitude']
+            tr.stats.latitude = coords['latitude']
+            tr.stats.elevation = coords['elevation']
+        except Exception as e:
+            if str(e) == 'No matching channel metadata found.':
+                warnings.warn(f'No metadata for {tr.id} found in inventory.',
+                              CollectionWarning)
+            else:
+                raise
 
     # Check if any Trace did NOT get coordinates assigned, and try to use JSON
     # coordinates if available
