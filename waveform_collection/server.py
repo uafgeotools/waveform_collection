@@ -131,7 +131,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                          '\'WATC\', or \'AVO\'.')
 
     if merge:
-        st_out.merge()  # Merge Traces with the same ID
+        st_out.merge(fill_value=0)  # Merge Traces with the same ID
     st_out.sort()
 
     # Check that all requested stations are present in Stream
