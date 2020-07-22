@@ -132,6 +132,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 
     if merge:
         st_out.merge(fill_value=0)  # Merge Traces with the same ID
+        warnings.warn('Merging with "fill_value=0"', CollectionWarning)
     st_out.sort()
 
     # Check that all requested stations are present in Stream
@@ -164,6 +165,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 
     # Add zeros to ensure all Traces have same length
     st_out.trim(starttime, endtime + time_buffer, pad=True, fill_value=0)
+    warnings.warn('Trimming with "fill_value=0"', CollectionWarning)
 
     print('Assigning coordinates...')
 
