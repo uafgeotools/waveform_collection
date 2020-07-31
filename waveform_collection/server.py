@@ -29,7 +29,8 @@ SEC2MIN = 1/60  # [min/s]
 
 
 def gather_waveforms(source, network, station, location, channel, starttime,
-                     endtime, time_buffer=0, merge=True, remove_response=False,
+                     endtime, time_buffer=0, merge_fill_value=0,
+                     trim_fill_value=0, remove_response=False,
                      return_failed_stations=False, watc_url=None,
                      watc_username=None, watc_password=None):
     """
@@ -61,8 +62,17 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             data request
         time_buffer (int or float): Extra amount of data to download after
             `endtime` [s]
-        merge (bool): Toggle merging of :class:`~obspy.core.trace.Trace` objects
-            with identical IDs
+        merge_fill_value (bool, int, float, str, or None): Controls merging of
+            :class:`~obspy.core.trace.Trace` objects with identical IDs. If
+            `False`, no merging is performed. Otherwise, a merge is performed
+            with the ``fill_value`` provided to this parameter. For details,
+            see the docstring of :meth:`obspy.core.stream.Stream.trim`
+        trim_fill_value (bool, int, float, or None): Controls trimming of the
+            output :class:`~obspy.core.stream.Stream`, useful if precisely
+            uniform start and end times are desired. If `False`, no trimming is
+            performed. Otherwise, a trim is performed with the ``fill_value``
+            provided to this parameter. For details, see the docstring of
+            :meth:`obspy.core.stream.Stream.merge`
         remove_response (bool): Toggle response removal via
             :meth:`~obspy.core.trace.Trace.remove_sensitivity` or a simple
             scalar multiplication
@@ -78,6 +88,10 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         `return_failed_stations` is `True`, additionally returns a list
         containing station codes that were requested but not downloaded
     """
+
+    # Check for issues with fill value args
+    if merge_fill_value is True or trim_fill_value is True:
+        raise ValueError('Cannot provide True to fill value parameters.')
 
     print('--------------')
     print('GATHERING DATA')
@@ -130,9 +144,12 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         raise ValueError('Unrecognized source. Valid options are \'IRIS\', '
                          '\'WATC\', or \'AVO\'.')
 
-    if merge:
-        st_out.merge(fill_value=0)  # Merge Traces with the same ID
-        warnings.warn('Merging with "fill_value=0"', CollectionWarning)
+    # Merge, if specified
+    if merge_fill_value is not False:
+        st_out.merge(fill_value=merge_fill_value)  # Merge Traces with same ID
+        warnings.warn(f'Merging with "fill_value={merge_fill_value}"',
+                      CollectionWarning)
+
     st_out.sort()
 
     # Check that all requested stations are present in Stream
@@ -163,9 +180,12 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     # Otherwise, show what the Stream contains
     print(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
 
-    # Add zeros to ensure all Traces have same length
-    st_out.trim(starttime, endtime + time_buffer, pad=True, fill_value=0)
-    warnings.warn('Trimming with "fill_value=0"', CollectionWarning)
+    # Trim, if specified
+    if trim_fill_value is not False:
+        st_out.trim(starttime, endtime + time_buffer, pad=True,
+                    fill_value=trim_fill_value)
+        warnings.warn(f'Trimming with "fill_value={trim_fill_value}"',
+                      CollectionWarning)
 
     print('Assigning coordinates...')
 
@@ -246,8 +266,9 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 
 def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                           channel, network='*', station='*', location='*',
-                          time_buffer=0, merge=True, remove_response=False,
-                          watc_url=None, watc_username=None, watc_password=None):
+                          time_buffer=0, merge_fill_value=0, trim_fill_value=0,
+                          remove_response=False, watc_url=None,
+                          watc_username=None, watc_password=None):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
@@ -284,8 +305,17 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         location (str): SEED location code [wildcards (``*``, ``?``) accepted]
         time_buffer (int or float): Extra amount of data to download after
             `endtime` [s]
-        merge (bool): Toggle merging of :class:`~obspy.core.trace.Trace` objects
-            with identical IDs
+        merge_fill_value (bool, int, float, str, or None): Controls merging of
+            :class:`~obspy.core.trace.Trace` objects with identical IDs. If
+            `False`, no merging is performed. Otherwise, a merge is performed
+            with the ``fill_value`` provided to this parameter. For details,
+            see the docstring of :meth:`obspy.core.stream.Stream.trim`
+        trim_fill_value (bool, int, float, or None): Controls trimming of the
+            output :class:`~obspy.core.stream.Stream`, useful if precisely
+            uniform start and end times are desired. If `False`, no trimming is
+            performed. Otherwise, a trim is performed with the ``fill_value``
+            provided to this parameter. For details, see the docstring of
+            :meth:`obspy.core.stream.Stream.merge`
         remove_response (bool): Toggle response removal via
             :meth:`~obspy.core.trace.Trace.remove_sensitivity` or a simple
             scalar multiplication
@@ -296,6 +326,10 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     Returns:
         :class:`~obspy.core.stream.Stream` containing bulk gathered waveforms
     """
+
+    # Check for issues with fill value args
+    if merge_fill_value is True or trim_fill_value is True:
+        raise ValueError('Cannot provide True to fill value parameters.')
 
     print('-------------------')
     print('BULK GATHERING DATA')
@@ -392,6 +426,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                             starttime=starttime,
                                             endtime=endtime,
                                             time_buffer=time_buffer,
+                                            merge_fill_value=False,
+                                            trim_fill_value=False,
                                             remove_response=remove_response,
                                             return_failed_stations=True)
     st_out += iris_st
@@ -409,6 +445,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                     starttime=starttime,
                                                     endtime=endtime,
                                                     time_buffer=time_buffer,
+                                                    merge_fill_value=False,
+                                                    trim_fill_value=False,
                                                     remove_response=remove_response,
                                                     return_failed_stations=True,
                                                     watc_url=watc_url,
@@ -433,6 +471,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                         starttime=starttime,
                                                         endtime=endtime,
                                                         time_buffer=time_buffer,
+                                                        merge_fill_value=False,
+                                                        trim_fill_value=False,
                                                         remove_response=remove_response,
                                                         return_failed_stations=True)
 
@@ -444,8 +484,19 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
             st_out += avo_st
 
-    if merge:
-        st_out.merge()  # Merge Traces with the same ID
+    # Merge, if specified
+    if merge_fill_value is not False:
+        st_out.merge(fill_value=merge_fill_value)  # Merge Traces with same ID
+        warnings.warn(f'Merging with "fill_value={merge_fill_value}"',
+                      CollectionWarning)
+
+    # Trim, if specified
+    if trim_fill_value is not False:
+        st_out.trim(starttime, endtime + time_buffer, pad=True,
+                    fill_value=trim_fill_value)
+        warnings.warn(f'Trimming with "fill_value={trim_fill_value}"',
+                      CollectionWarning)
+
     st_out.sort()
 
     print('--------------')
