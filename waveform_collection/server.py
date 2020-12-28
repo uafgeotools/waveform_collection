@@ -49,7 +49,8 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         source (str): Which source to gather waveforms from. Options are:
 
             * `'IRIS'` – IRIS FDSN
-            * `'WATC'` – WATC FDSN
+            * `'WATC'` – WATC FDSN (requires `watc_url`, `watc_username`, and
+              `watc_password`)
             * `'AVO'` – AVO Winston
 
         network (str): SEED network code [wildcards (``*``, ``?``) accepted]
@@ -79,7 +80,8 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         return_failed_stations (bool): If `True`, returns a list of station
             codes that were requested but not downloaded. This disables the
             standard failed station warning message
-        watc_url (str): URL for WATC FDSN server
+        watc_url (str): URL for WATC FDSN server (``http://10.30.6.3:8080``, or
+            ``http://10.30.5.10:8080`` if using VPN)
         watc_username (str): Username for WATC FDSN server
         watc_password (str): Password for WATC FDSN server
 
@@ -111,6 +113,11 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 
     # WATC FDSN
     elif source == 'WATC':
+
+        # Check that all three arguments required for the WATC server are present
+        if watc_url is None or watc_username is None or watc_password is None:
+            raise ValueError('WATC source requires watc_url, watc_username, and '
+                             'watc_password.')
 
         print('Connecting to WATC FDSN...')
         client = FDSN_Client(base_url=watc_url, user=watc_username,
