@@ -153,7 +153,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 
     # Merge, if specified
     if merge_fill_value is not False:
-        st_out.merge(fill_value=merge_fill_value)  # Merge Traces with same ID
+        _safe_merge(st_out, merge_fill_value)  # Merge Traces with same ID
         warnings.warn(f'Merging with "fill_value={merge_fill_value}"',
                       CollectionWarning)
 
@@ -493,7 +493,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
     # Merge, if specified
     if merge_fill_value is not False:
-        st_out.merge(fill_value=merge_fill_value)  # Merge Traces with same ID
+        _safe_merge(st_out, merge_fill_value)  # Merge Traces with same ID
         warnings.warn(f'Merging with "fill_value={merge_fill_value}"',
                       CollectionWarning)
 
@@ -511,6 +511,26 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
           'for any missed stations.')
 
     return st_out
+
+
+def _safe_merge(st, fill_value):
+    """
+    Merge Traces with same ID, modifying data types if necessary. Modified from code by
+    Aaron Wech.
+
+    Args:
+        st (:class:`~obspy.core.stream.Stream`): Input Stream (modified in-place!)
+        fill_value (int, float, str, or None): Passed on to
+            :meth:`~obspy.core.stream.Stream.merge()`
+    """
+
+    try:
+        st.merge(fill_value=fill_value)
+    except Exception:  # ObsPy raises an Exception if data types are not all identical
+        for tr in st:
+            if tr.data.dtype != np.dtype(np.int32):
+                tr.data = tr.data.astype(np.int32, copy=False)
+        st.merge(fill_value=fill_value)
 
 
 def _restricted_matching(code_type, requested_codes, avo_client,
