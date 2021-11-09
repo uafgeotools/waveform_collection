@@ -521,7 +521,7 @@ def _safe_merge(st, fill_value):
     Args:
         st (:class:`~obspy.core.stream.Stream`): Input Stream (modified in-place!)
         fill_value (int, float, str, or None): Passed on to
-            :meth:`~obspy.core.stream.Stream.merge()`
+            :meth:`obspy.core.stream.Stream.merge`
     """
 
     try:
