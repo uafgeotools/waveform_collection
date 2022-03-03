@@ -275,7 +275,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                           channel, network='*', station='*', location='*',
                           time_buffer=0, merge_fill_value=0, trim_fill_value=0,
                           remove_response=False, watc_url=None,
-                          watc_username=None, watc_password=None):
+                          watc_username=None, watc_password=None, iris_only=False):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
@@ -329,6 +329,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         watc_url (str): URL for WATC FDSN server
         watc_username (str): Username for WATC FDSN server
         watc_password (str): Password for WATC FDSN server
+        iris_only (bool): If `True`, only the IRIS FDSN source is used
 
     Returns:
         :class:`~obspy.core.stream.Stream` containing bulk gathered waveforms
@@ -443,36 +444,17 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     # (if the user set username and password)
     if iris_failed:
 
-        if watc_username and watc_password:
-            # Gather waveforms from WATC
-            watc_st, watc_failed = gather_waveforms(source='WATC', network=network,
-                                                    station=','.join(iris_failed),
-                                                    location=location,
-                                                    channel=channel,
-                                                    starttime=starttime,
-                                                    endtime=endtime,
-                                                    time_buffer=time_buffer,
-                                                    merge_fill_value=False,
-                                                    trim_fill_value=False,
-                                                    remove_response=remove_response,
-                                                    return_failed_stations=True,
-                                                    watc_url=watc_url,
-                                                    watc_username=watc_username,
-                                                    watc_password=watc_password)
+        if iris_only:
+            print('--------------')
+            for sta in iris_failed:
+                warnings.warn(f'Station {sta} found in radius search but '
+                              'no data found. Try specifying `iris_only=False` to look '
+                              'in additional data archives.', CollectionWarning)
         else:
-            # Return an empty Stream and same failed stations
-            watc_st = Stream()
-            watc_failed = iris_failed
-
-        st_out += watc_st
-
-        # If WATC couldn't grab all stations missed by IRIS, try AVO
-        if watc_failed:
-
-            # Gather waveforms from AVO
-            avo_st, remaining_failed = gather_waveforms(source='AVO',
-                                                        network=network,
-                                                        station=','.join(watc_failed),
+            if watc_username and watc_password:
+                # Gather waveforms from WATC
+                watc_st, watc_failed = gather_waveforms(source='WATC', network=network,
+                                                        station=','.join(iris_failed),
                                                         location=location,
                                                         channel=channel,
                                                         starttime=starttime,
@@ -481,15 +463,41 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                         merge_fill_value=False,
                                                         trim_fill_value=False,
                                                         remove_response=remove_response,
-                                                        return_failed_stations=True)
+                                                        return_failed_stations=True,
+                                                        watc_url=watc_url,
+                                                        watc_username=watc_username,
+                                                        watc_password=watc_password)
+            else:
+                # Return an empty Stream and same failed stations
+                watc_st = Stream()
+                watc_failed = iris_failed
 
-            if remaining_failed:
-                print('--------------')
-                for sta in remaining_failed:
-                    warnings.warn(f'Station {sta} found in radius search but '
-                                  'no data found.', CollectionWarning)
+            st_out += watc_st
 
-            st_out += avo_st
+            # If WATC couldn't grab all stations missed by IRIS, try AVO
+            if watc_failed:
+
+                # Gather waveforms from AVO
+                avo_st, remaining_failed = gather_waveforms(source='AVO',
+                                                            network=network,
+                                                            station=','.join(watc_failed),
+                                                            location=location,
+                                                            channel=channel,
+                                                            starttime=starttime,
+                                                            endtime=endtime,
+                                                            time_buffer=time_buffer,
+                                                            merge_fill_value=False,
+                                                            trim_fill_value=False,
+                                                            remove_response=remove_response,
+                                                            return_failed_stations=True)
+
+                if remaining_failed:
+                    print('--------------')
+                    for sta in remaining_failed:
+                        warnings.warn(f'Station {sta} found in radius search but '
+                                      'no data found.', CollectionWarning)
+
+                st_out += avo_st
 
     # Merge, if specified
     if merge_fill_value is not False:
