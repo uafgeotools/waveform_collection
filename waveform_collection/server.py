@@ -275,7 +275,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                           channel, network='*', station='*', location='*',
                           time_buffer=0, merge_fill_value=0, trim_fill_value=0,
                           remove_response=False, watc_url=None,
-                          watc_username=None, watc_password=None, iris_only=False):
+                          watc_username=None, watc_password=None, iris_only=True):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
