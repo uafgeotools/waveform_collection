@@ -249,7 +249,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                 if remove_response == 'full':
                     # pre-filter for response removal, these values should
                     # work for most cases
-                    pre_filt = [0.0005, 0.001, tr.stats.sampling_rate/2-2,
+                    pre_filt = [0.0005, 0.001, (tr.stats.sampling_rate / 2) - 2,
                                 tr.stats.sampling_rate/2]
                     tr.remove_response(pre_filt=pre_filt, output='VEL',
                                        water_level=None)
