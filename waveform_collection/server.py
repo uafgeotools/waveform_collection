@@ -74,7 +74,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             performed. Otherwise, a trim is performed with the ``fill_value``
             provided to this parameter. For details, see the docstring of
             :meth:`obspy.core.stream.Stream.merge`
-        remove_response (str): Response removal via full frequency deconvolution
+        remove_response (bool or str): Response removal via full frequency deconvolution
             ('full'), single frequency sensitivity ('sens') or a simple
             scalar multiplication. Default is 'False' to return stream in
             counts.
