@@ -75,7 +75,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             provided to this parameter. For details, see the docstring of
             :meth:`obspy.core.stream.Stream.merge`
         remove_response (bool or str): Response removal via full frequency deconvolution
-            ('full'), single frequency sensitivity ('sens') or a simple
+            (`'full'`) or single frequency sensitivity (`'sens'`) / a simple
             scalar multiplication. Default is 'False' to return stream in
             counts.
         return_failed_stations (bool): If `True`, returns a list of station
