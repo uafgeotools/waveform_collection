@@ -239,8 +239,13 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                 print(f'No coordinates available for {tr.id}. Stopping.')
                 raise
 
-    # Remove sensitivity
+    # Remove response
     if remove_response:
+    
+        # Backwards compatibility
+        if remove_response is True:
+          remove_response = 'sens'
+        
         print(f'Removing response, method={remove_response}')
 
         for tr in st_out:
