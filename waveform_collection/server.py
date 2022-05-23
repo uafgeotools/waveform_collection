@@ -74,9 +74,10 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             performed. Otherwise, a trim is performed with the ``fill_value``
             provided to this parameter. For details, see the docstring of
             :meth:`obspy.core.stream.Stream.merge`
-        remove_response (bool): Toggle response removal via
-            :meth:`~obspy.core.trace.Trace.remove_sensitivity` or a simple
-            scalar multiplication
+        remove_response (bool or str): Response removal via full frequency deconvolution
+            (`'full'`) or single frequency sensitivity (`'sens'`) / a simple
+            scalar multiplication. Default is `False` to return stream in
+            counts.
         return_failed_stations (bool): If `True`, returns a list of station
             codes that were requested but not downloaded. This disables the
             standard failed station warning message
@@ -238,17 +239,30 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                 print(f'No coordinates available for {tr.id}. Stopping.')
                 raise
 
-    # Remove sensitivity
+    # Remove response
     if remove_response:
-
-        print('Removing sensitivity...')
+    
+        # Backwards compatibility
+        if remove_response is True:
+          remove_response = 'sens'
+        
+        print(f'Removing response, method={remove_response}')
 
         for tr in st_out:
             try:
-                # Just removing sensitivity for now. remove_response() can lead
-                # to errors. This should be sufficient for now. Plus some
-                # IRIS-AVO responses are wonky.
-                tr.remove_sensitivity()
+                # Remove full frequency response
+                if remove_response == 'full':
+                    # pre-filter for response removal, these values should
+                    # work for most cases
+                    pre_filt = [0.0005, 0.001, (tr.stats.sampling_rate / 2) - 2,
+                                tr.stats.sampling_rate/2]
+                    tr.remove_response(pre_filt=pre_filt, output='VEL',
+                                       water_level=None)
+
+                # Just apply single freq sensitivity
+                elif remove_response == 'sens':
+                    tr.remove_sensitivity()
+
             except ValueError:  # No response information found
                 # This is only set up for infrasound calibration values
                 try:
