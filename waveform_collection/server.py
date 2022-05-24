@@ -8,17 +8,6 @@ import os
 import fnmatch
 import warnings
 from . import CollectionWarning
-from .local.common import load_json_file
-
-
-# Get location of AVO JSON files
-json_dir = os.path.join(os.path.dirname(__file__), '..', 'avo_json')
-
-# Load AVO infrasound station calibration values (units are Pa/ct)
-AVO_INFRA_CALIBS = load_json_file(os.path.join(json_dir, 'avo_infra_calibs.json'))
-
-# Load AVO station coordinates (elevation units are meters)
-AVO_COORDS = load_json_file(os.path.join(json_dir, 'avo_coords.json'))
 
 # Default infrasound channels - covering all the bases here!
 INFRASOUND_CHANNELS = 'BDF,HDF,CDF,DDF'
@@ -224,20 +213,13 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             else:
                 raise
 
-    # Check if any Trace did NOT get coordinates assigned, and try to use JSON
-    # coordinates if available
+    # Check if any Trace did NOT get coordinates assigned
     for tr in st_out:
         try:
             tr.stats.longitude, tr.stats.latitude, tr.stats.elevation
         except AttributeError:
-            try:
-                tr.stats.latitude, tr.stats.longitude,\
-                    tr.stats.elevation = AVO_COORDS[tr.id]
-                warnings.warn(f'Using coordinates from JSON file for {tr.id}.',
-                              CollectionWarning)
-            except KeyError:
-                print(f'No coordinates available for {tr.id}. Stopping.')
-                raise
+            print(f'No coordinates available for {tr.id}. Stopping.')
+            raise
 
     # Remove response
     if remove_response:
@@ -264,16 +246,9 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                     tr.remove_sensitivity()
 
             except ValueError:  # No response information found
-                # This is only set up for infrasound calibration values
-                try:
-                    calib = AVO_INFRA_CALIBS[tr.id]
-                    tr.data = tr.data * calib
-                    warnings.warn('Using calibration value from JSON file for '
-                                  f'{tr.id}.', CollectionWarning)
-                except KeyError:
-                    print(f'No calibration value available for {tr.id}. '
-                          'Stopping.')
-                    raise
+                print(f'No calibration value available for {tr.id}. '
+                        'Stopping.')
+                raise
 
     print('Done')
 
@@ -407,22 +382,6 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                   cha.longitude)  # [m]
                     if dist <= max_radius * KM2M:
                         requested_station_list.append(stn.code)
-
-    # Loop through each entry in AVO station coordinates JSON file
-    for tr_id, coord in AVO_COORDS.items():
-
-        nw, sta, loc, cha = tr_id.split('.')  # Extract codes from Trace.id
-
-        # Only add station to requested stations list if it satisfies the
-        # user-supplied query restrictions
-        if (_matching([nw], network) and
-                _matching([sta], station) and
-                _matching([loc], location) and
-                _matching([cha], channel)):
-
-            dist, _, _ = gps2dist_azimuth(lat_0, lon_0, *coord[0:2])  # [m]
-            if dist <= max_radius * KM2M:
-                requested_station_list.append(sta)
 
     if not requested_station_list:
         raise ValueError('Station list is empty. Expand the station search '
