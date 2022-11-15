@@ -330,9 +330,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     Returns:
         :class:`~obspy.core.stream.Stream` containing bulk gathered waveforms
     """
-    
-    # Set up log function if a verbose output is desired
-    log = print if verbose else lambda value, *args, **kw: None
+    # log() does nothing if `verbose=False`
+    log = print if verbose else lambda *args, **kwargs: None
     
     # Check for issues with fill value args
     if merge_fill_value is True or trim_fill_value is True:
