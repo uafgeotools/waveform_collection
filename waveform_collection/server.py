@@ -83,7 +83,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         containing station codes that were requested but not downloaded
     """
     # Set up log function if a verbose output is desired
-    log = print if verbose else lambda value, *args, **kw: None
+    log = print if verbose else lambda *args, **kwargs: None
     
     # Check for issues with fill value args
     if merge_fill_value is True or trim_fill_value is True:
