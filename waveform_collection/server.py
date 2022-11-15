@@ -82,7 +82,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         `return_failed_stations` is `True`, additionally returns a list
         containing station codes that were requested but not downloaded
     """
-    # Set up log function if a verbose output is desired
+    # log() does nothing if `verbose=False`
     log = print if verbose else lambda *args, **kwargs: None
     
     # Check for issues with fill value args
