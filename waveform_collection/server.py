@@ -21,7 +21,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                      endtime, time_buffer=0, merge_fill_value=0,
                      trim_fill_value=0, remove_response=False,
                      return_failed_stations=False, watc_url=None,
-                     watc_username=None, watc_password=None):
+                     watc_username=None, watc_password=None, verbose=True):
     """
     Gather seismic/infrasound waveforms from IRIS or WATC FDSN, or AVO Winston,
     and output a :class:`~obspy.core.stream.Stream` with station/element
@@ -74,26 +74,30 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             ``http://10.30.5.10:8080`` if using VPN)
         watc_username (str): Username for WATC FDSN server
         watc_password (str): Password for WATC FDSN server
+        verbose (bool): If `False`, all print statements will be blocked. 
+            Default is `True`.
 
     Returns:
         :class:`~obspy.core.stream.Stream` containing gathered waveforms. If
         `return_failed_stations` is `True`, additionally returns a list
         containing station codes that were requested but not downloaded
     """
-
+    # log() does nothing if `verbose=False`
+    log = print if verbose else lambda *args, **kwargs: None
+    
     # Check for issues with fill value args
     if merge_fill_value is True or trim_fill_value is True:
         raise ValueError('Cannot provide True to fill value parameters.')
 
-    print('--------------')
-    print('GATHERING DATA')
-    print('--------------')
+    log('--------------')
+    log('GATHERING DATA')
+    log('--------------')
 
     # IRIS FDSN
     if source == 'IRIS':
 
         client = FDSN_Client('IRIS')
-        print('Reading data from IRIS FDSN...')
+        log('Reading data from IRIS FDSN...')
         try:
             st_out = client.get_waveforms(network, station, location, channel,
                                           starttime, endtime + time_buffer,
@@ -109,10 +113,10 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             raise ValueError('WATC source requires watc_url, watc_username, and '
                              'watc_password.')
 
-        print('Connecting to WATC FDSN...')
+        log('Connecting to WATC FDSN...')
         client = FDSN_Client(base_url=watc_url, user=watc_username,
                              password=watc_password)
-        print('Successfully connected. Reading data from WATC FDSN...')
+        log('Successfully connected. Reading data from WATC FDSN...')
         try:
             st_out = client.get_waveforms(network, station, location, channel,
                                           starttime, endtime + time_buffer,
@@ -124,7 +128,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     elif source == 'AVO':
 
         client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
-        print('Reading data from AVO Winston...')
+        log('Reading data from AVO Winston...')
         st_out = Stream()  # Make empty Stream object to populate
 
         # Brute-force "dynamic grid search" over network/station/channel/location codes
@@ -168,14 +172,14 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 
     # If the Stream is empty, then we can stop here
     if st_out.count() == 0:
-        print('No data downloaded.')
+        log('No data downloaded.')
         if return_failed_stations:
             return st_out, failed_stations
         else:
             return st_out
 
     # Otherwise, show what the Stream contains
-    print(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
+    log(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
 
     # Trim, if specified
     if trim_fill_value is not False:
@@ -184,7 +188,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         warnings.warn(f'Trimming with "fill_value={trim_fill_value}"',
                       CollectionWarning)
 
-    print('Assigning coordinates...')
+    log('Assigning coordinates...')
 
     # Use IRIS inventory info for AVO data source
     if source == 'AVO':
@@ -218,7 +222,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         try:
             tr.stats.longitude, tr.stats.latitude, tr.stats.elevation
         except AttributeError:
-            print(f'No coordinates available for {tr.id}. Stopping.')
+            log(f'No coordinates available for {tr.id}. Stopping.')
             raise
 
     # Remove response
@@ -228,7 +232,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         if remove_response is True:
           remove_response = 'sens'
         
-        print(f'Removing response, method={remove_response}')
+        log(f'Removing response, method={remove_response}')
 
         for tr in st_out:
             try:
@@ -246,11 +250,11 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                     tr.remove_sensitivity()
 
             except ValueError:  # No response information found
-                print(f'No calibration value available for {tr.id}. '
+                log(f'No calibration value available for {tr.id}. '
                         'Stopping.')
                 raise
 
-    print('Done')
+    log('Done')
 
     # Return the Stream with coordinates attached (and responses removed if
     # specified)
@@ -264,7 +268,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                           channel, network='*', station='*', location='*',
                           time_buffer=0, merge_fill_value=0, trim_fill_value=0,
                           remove_response=False, watc_url=None,
-                          watc_username=None, watc_password=None, iris_only=True):
+                          watc_username=None, watc_password=None, iris_only=True,
+                          verbose=True):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
@@ -319,20 +324,24 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         watc_username (str): Username for WATC FDSN server
         watc_password (str): Password for WATC FDSN server
         iris_only (bool): If `True`, only the IRIS FDSN source is used
+        verbose (bool): If `False`, all print statements will be blocked. 
+            Default is `True`.
 
     Returns:
         :class:`~obspy.core.stream.Stream` containing bulk gathered waveforms
     """
-
+    # log() does nothing if `verbose=False`
+    log = print if verbose else lambda *args, **kwargs: None
+    
     # Check for issues with fill value args
     if merge_fill_value is True or trim_fill_value is True:
         raise ValueError('Cannot provide True to fill value parameters.')
 
-    print('-------------------')
-    print('BULK GATHERING DATA')
-    print('-------------------')
+    log('-------------------')
+    log('BULK GATHERING DATA')
+    log('-------------------')
 
-    print('Creating station list...')
+    log('Creating station list...')
 
     inventories = []  # Create empty list of inventories
 
@@ -348,17 +357,17 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         inventories.append(iris_inv)  # Add IRIS inventory to list
 
     except FDSNNoDataException:
-        print('No stations found on IRIS FDSN.')
+        log('No stations found on IRIS FDSN.')
 
     # If the user supplied both a WATC password and WATC username, then search
     # through WATC database
     if watc_username and watc_password:
 
         # Grab WATC inventory
-        print('Connecting to WATC FDSN...')
+        log('Connecting to WATC FDSN...')
         watc_client = FDSN_Client(base_url=watc_url, user=watc_username,
                                   password=watc_password)
-        print('Successfully connected.')
+        log('Successfully connected.')
         try:
             watc_inv = watc_client.get_stations(starttime=starttime,
                                                 endtime=endtime + time_buffer,
@@ -369,7 +378,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
             inventories.append(watc_inv)  # Add WATC inventory to list
 
         except FDSNNoDataException:
-            print('No stations found on WATC FDSN.')
+            log('No stations found on WATC FDSN.')
 
     requested_station_list = []  # Initialize list of stations to request
 
@@ -390,13 +399,13 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     # Put into the correct format for ObsPy (e.g., 'HOM,O22K,DLL')
     requested_stations = ','.join(np.unique(requested_station_list))
 
-    print('Done')
+    log('Done')
 
     if time_buffer != 0:
-        print(f'Using time buffer of {time_buffer:.1f} s '
+        log(f'Using time buffer of {time_buffer:.1f} s '
               f'(~{time_buffer * SEC2MIN:.0f} min)')
 
-    print('Making calls to gather_waveforms()...')
+    log('Making calls to gather_waveforms()...')
 
     st_out = Stream()  # Initialize empty Stream to populate
 
@@ -418,7 +427,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
     if iris_failed:
 
         if iris_only:
-            print('--------------')
+            log('--------------')
             for sta in iris_failed:
                 warnings.warn(f'Station {sta} found in radius search but '
                               'no data found. Try specifying `iris_only=False` to look '
@@ -465,7 +474,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                             return_failed_stations=True)
 
                 if remaining_failed:
-                    print('--------------')
+                    log('--------------')
                     for sta in remaining_failed:
                         warnings.warn(f'Station {sta} found in radius search but '
                                       'no data found.', CollectionWarning)
@@ -487,8 +496,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
 
     st_out.sort()
 
-    print('--------------')
-    print('Finishing gathering waveforms from station list. Check warnings '
+    log('--------------')
+    log('Finishing gathering waveforms from station list. Check warnings '
           'for any missed stations.')
 
     return st_out
