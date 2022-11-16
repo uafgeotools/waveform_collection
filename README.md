@@ -63,5 +63,6 @@ Authors
 
 David Fee<br>
 Julia Gestrich<br>
+Darren Tan<br>
 Liam Toney<br>
 Andrew Winkelman
