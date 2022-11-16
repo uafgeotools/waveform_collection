@@ -419,7 +419,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                             merge_fill_value=False,
                                             trim_fill_value=False,
                                             remove_response=remove_response,
-                                            return_failed_stations=True)
+                                            return_failed_stations=True,
+                                            verbose=verbose)
     st_out += iris_st
 
     # If IRIS couldn't grab all stations in requested station list, try WATC
@@ -448,7 +449,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                         return_failed_stations=True,
                                                         watc_url=watc_url,
                                                         watc_username=watc_username,
-                                                        watc_password=watc_password)
+                                                        watc_password=watc_password,
+                                                        verbose=verbose)
             else:
                 # Return an empty Stream and same failed stations
                 watc_st = Stream()
@@ -471,7 +473,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                             merge_fill_value=False,
                                                             trim_fill_value=False,
                                                             remove_response=remove_response,
-                                                            return_failed_stations=True)
+                                                            return_failed_stations=True,
+                                                            verbose=verbose)
 
                 if remaining_failed:
                     log('--------------')
