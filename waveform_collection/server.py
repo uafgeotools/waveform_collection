@@ -528,8 +528,8 @@ def _safe_merge(st, fill_value):
     except Exception:  # ObsPy also raises an Exception if traces with the same ids have different sampling rates
         for tr in st:
             if tr.stats.sampling_rate != np.round(tr.stats.sampling_rate):
-                warnings.warn('Rounding off %s sample rate to the nearest integer for merge compatibility' % tr.id,
-                              CollectionWarning)
+                warnings.warn('Rounding off %s sampling rate from %f Hz to %.1f Hz for merge compatibility.' % (
+                              tr.id, tr.stats.sampling_rate, np.round(tr.stats.sampling_rate)), CollectionWarning)
                 tr.stats.sampling_rate = np.round(tr.stats.sampling_rate)
         st.merge(fill_value=fill_value)  # Try merging with rounded sampling rates
 
