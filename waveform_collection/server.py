@@ -26,7 +26,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     Gather seismic/infrasound waveforms from any ObsPy-supported FDSN
     (see https://docs.obspy.org/packages/obspy.clients.fdsn.html), WATC FDSN, 
     or AVO Winston, and output a :class:`~obspy.core.stream.Stream` with 
-    station/element coordinates attached. Optionally remove the sensitivity.
+    station/element coordinates attached. Optionally remove the response.
 
     **NOTE**
 
