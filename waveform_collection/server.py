@@ -23,9 +23,10 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                      return_failed_stations=False, watc_url=None,
                      watc_username=None, watc_password=None, verbose=True):
     """
-    Gather seismic/infrasound waveforms from IRIS or WATC FDSN, or AVO Winston,
-    and output a :class:`~obspy.core.stream.Stream` with station/element
-    coordinates attached. Optionally remove the sensitivity.
+    Gather seismic/infrasound waveforms from any ObsPy-supported FDSN
+    (see https://docs.obspy.org/packages/obspy.clients.fdsn.html), WATC FDSN, 
+    or AVO Winston, and output a :class:`~obspy.core.stream.Stream` with 
+    station/element coordinates attached. Optionally remove the response.
 
     **NOTE**
 
@@ -37,7 +38,8 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     Args:
         source (str): Which source to gather waveforms from. Options are:
 
-            * `'IRIS'` – IRIS FDSN
+            * Any ObsPy-supported FDSN (e.g., `'IRIS'`, `'NCEDC'`). For full 
+              list, see https://docs.obspy.org/packages/obspy.clients.fdsn.html
             * `'WATC'` – WATC FDSN (requires `watc_url`, `watc_username`, and
               `watc_password`)
             * `'AVO'` – AVO Winston
@@ -93,20 +95,8 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     log('GATHERING DATA')
     log('--------------')
 
-    # IRIS FDSN
-    if source == 'IRIS':
-
-        client = FDSN_Client('IRIS')
-        log('Reading data from IRIS FDSN...')
-        try:
-            st_out = client.get_waveforms(network, station, location, channel,
-                                          starttime, endtime + time_buffer,
-                                          attach_response=True)
-        except FDSNNoDataException:
-            st_out = Stream()  # Just create an empty Stream object
-
     # WATC FDSN
-    elif source == 'WATC':
+    if source == 'WATC':
 
         # Check that all three arguments required for the WATC server are present
         if watc_url is None or watc_username is None or watc_password is None:
@@ -141,9 +131,16 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                         except KeyError:
                             pass
 
+    # ObsPy-supported FDSN
     else:
-        raise ValueError('Unrecognized source. Valid options are \'IRIS\', '
-                         '\'WATC\', or \'AVO\'.')
+        client = FDSN_Client(source)
+        log('Reading data from %s FDSN...' % source)
+        try:
+            st_out = client.get_waveforms(network, station, location, channel,
+                                          starttime, endtime + time_buffer,
+                                          attach_response=True)
+        except FDSNNoDataException:
+            st_out = Stream()  # Just create an empty Stream object
 
     # Merge, if specified
     if merge_fill_value is not False:
