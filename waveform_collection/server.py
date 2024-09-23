@@ -3,6 +3,7 @@ from obspy.clients.earthworm import Client as EW_Client
 from obspy.clients.fdsn.header import FDSNNoDataException
 from obspy.geodetics import gps2dist_azimuth
 from obspy import Inventory, Stream
+from multiprocess import Pool
 import numpy as np
 import os
 import fnmatch
@@ -21,7 +22,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                      endtime, time_buffer=0, merge_fill_value=0,
                      trim_fill_value=0, remove_response=False,
                      return_failed_stations=False, watc_url=None,
-                     watc_username=None, watc_password=None, verbose=True):
+                     watc_username=None, watc_password=None, verbose=True, parallel=False, cores=None):
     """
     Gather seismic/infrasound waveforms from any ObsPy-supported FDSN
     (see https://docs.obspy.org/packages/obspy.clients.fdsn.html), WATC FDSN, 
@@ -78,6 +79,8 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         watc_password (str): Password for WATC FDSN server
         verbose (bool): If `False`, all print statements will be blocked. 
             Default is `True`.
+        parallel (bool): If `True`, use increments and parallel processing to download data
+        cores (int): Number of cores to use for parallel processing
 
     Returns:
         :class:`~obspy.core.stream.Stream` containing gathered waveforms. If
@@ -92,7 +95,10 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         raise ValueError('Cannot provide True to fill value parameters.')
 
     log('--------------')
-    log('GATHERING DATA')
+    if parallel:
+        log('GATHERING DATA IN PARALLEL')
+    else:
+        log('GATHERING DATA')
     log('--------------')
 
     # WATC FDSN
@@ -108,9 +114,13 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                              password=watc_password)
         log('Successfully connected. Reading data from WATC FDSN...')
         try:
-            st_out = client.get_waveforms(network, station, location, channel,
-                                          starttime, endtime + time_buffer,
-                                          attach_response=True)
+            if parallel:
+                st_out = parallel_gather(client, network, station, location,
+                                         channel, starttime, endtime + time_buffer, cores)
+            else:
+                st_out = client.get_waveforms(network, station, location, channel,
+                                              starttime, endtime + time_buffer,
+                                              attach_response=True)
         except FDSNNoDataException:
             st_out = Stream()  # Just create an empty Stream object
 
@@ -127,7 +137,11 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                 for cha in _restricted_matching('channel', channel, client, network=nw, station=sta):
                     for loc in _restricted_matching('location', location, client, network=nw, station=sta, channel=cha):
                         try:
-                            st_out += client.get_waveforms(nw, sta, loc, cha, starttime, endtime + time_buffer)
+                            if parallel:
+                                st_out = parallel_gather(client, nw, sta, loc,
+                                                         cha, starttime, endtime + time_buffer, cores)
+                            else:
+                                st_out += client.get_waveforms(nw, sta, loc, cha, starttime, endtime + time_buffer)
                         except KeyError:
                             pass
 
@@ -136,9 +150,13 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         client = FDSN_Client(source)
         log('Reading data from %s FDSN...' % source)
         try:
-            st_out = client.get_waveforms(network, station, location, channel,
-                                          starttime, endtime + time_buffer,
-                                          attach_response=True)
+            if parallel:
+                st_out = parallel_gather(client, network, station, location,
+                                         channel, starttime, endtime + time_buffer, cores)
+            else:
+                st_out = client.get_waveforms(network, station, location, channel,
+                                              starttime, endtime + time_buffer,
+                                              attach_response=True)
         except FDSNNoDataException:
             st_out = Stream()  # Just create an empty Stream object
 
@@ -610,3 +628,75 @@ def _matching(unique_code_list, requested_codes):
         matching_codes += fnmatch.filter(unique_code_list, pattern)
 
     return np.unique(matching_codes).tolist()
+
+def get_increment_waveforms(args):
+    """
+    Function required for parallel processing
+
+    Args:
+        args (tuple): A tuple containing the following elements:
+            client (obspy.clients.fdsn.Client): The FDSN client to use for data retrieval.
+            network (str): SEED network code [wildcards (``*``, ``?``) accepted].
+            station (str): SEED station code [wildcards (``*``, ``?``) accepted].
+            location (str): SEED location code [wildcards (``*``, ``?``) accepted].
+            channel (str): SEED channel code [wildcards (``*``, ``?``) accepted].
+            starttime (obspy.core.utcdatetime.UTCDateTime): Start time for data request.
+            endtime (obspy.core.utcdatetime.UTCDateTime): End time for data request.
+
+    Returns:
+        obspy.core.stream.Stream: Stream of gathered waveforms for the specified time increment.
+    """
+    client, network, station, location, channel, starttime, endtime = args
+    try:
+        st_inc = client.get_waveforms(network=network, station=station, location=location, channel=channel,
+                                  starttime=starttime, endtime=endtime, attach_response=True)
+        return st_inc
+    except FDSNNoDataException:
+        return Stream()  # Just create an empty Stream object
+
+
+def parallel_gather(client, network, station, location, channel, starttime,
+                     endtime, cores, increment_s=12*60*60):
+    """
+    Gather waveforms incrementally and in parallel using multiple cores.
+
+    Args:
+        client (obspy.clients.fdsn.Client): The FDSN client to use for data retrieval.
+        network (str): SEED network code [wildcards (``*``, ``?``) accepted]
+        station (str): SEED station code [wildcards (``*``, ``?``) accepted]
+        location (str): SEED location code [wildcards (``*``, ``?``) accepted]
+        channel (str): SEED channel code [wildcards (``*``, ``?``) accepted]
+        starttime (:class:`~obspy.core.utcdatetime.UTCDateTime`): Start time for
+            data request
+        endtime (:class:`~obspy.core.utcdatetime.UTCDateTime`): End time for
+            data request
+        cores (int): Number of cores to use for parallel processing.
+        increment_s (int, optional): Time increment in seconds for each parallel task. Default is 12 hours (43200 seconds).
+
+    Returns:
+        obspy.core.stream.Stream: Combined stream of gathered waveforms.
+    """
+    if cores > os.cpu_count():  # Check if requested cores exceeds available cores
+        warnings.warn(f"Number of cores requested ({cores}) exceeds number of available cores ({os.cpu_count()}). "
+                      f"Using {os.cpu_count()} cores instead.", CollectionWarning)
+        cores = os.cpu_count()
+
+    time_ranges = []
+
+    increment_start = starttime
+    while increment_start < endtime:
+        increment_end = min(increment_start + increment_s, endtime)  # selects end time of the increment
+        if increment_end > increment_start:
+            time_ranges.append((increment_start, increment_end))  # appends the start and end time of the increment
+        increment_start = increment_end  # updates new increment start time
+
+    with Pool(processes=cores) as pool:  # Use multiprocess to gather data in parallel
+        results = pool.map(get_increment_waveforms,
+                           [(client, network, station, location, channel, times[0], times[1]) for times in time_ranges])
+
+    combined_stream = Stream()
+    for st_inc in results:  # Combine all the streams into one
+        combined_stream += st_inc
+    combined_stream.merge(method=0, fill_value=0)
+
+    return combined_stream
