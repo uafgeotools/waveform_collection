@@ -193,9 +193,6 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         else:
             return st_out
 
-    # Otherwise, show what the Stream contains
-    log(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
-
     # Trim, if specified
     if trim_fill_value is not False:
         st_out.trim(starttime, endtime + time_buffer, pad=True,
