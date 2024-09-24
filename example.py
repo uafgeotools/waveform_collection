@@ -12,12 +12,14 @@ st = gather_waveforms(source='IRIS', network='AV', station='DLL',
                       endtime=ENDTIME)
 
 #%% Example 2 - Gather all BHN channel seismic records from within a 200 km radius of Iliamna volcano, Alaska
-
+import time
+start = time.time()
 st_bulk = gather_waveforms_bulk(lon_0=-153.0918, lat_0=60.0319, max_radius=200,
                                 starttime=STARTTIME, endtime=ENDTIME,
-                                channel='BHN')
+                                channel='BHN', parallel=True, cores=None)
+# gather_waveforms_bulk can also be run in parallel, faster for ~>12 hours of data
 
-#%% Example 3 - Gather 3-component seismic data from SSLS in parallel using 6 cores. (uses same gather_waveforms function as Example 1)
+#%% Example 3 - Gather 10 days of 3-component seismic data from SSLS in parallel using 6 cores.
 
 # Time window of data to gather for this example
 STARTTIME = UTCDateTime(2023, 9, 1)

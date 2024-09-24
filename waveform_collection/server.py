@@ -284,7 +284,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                           time_buffer=0, merge_fill_value=0, trim_fill_value=0,
                           remove_response=False, watc_url=None,
                           watc_username=None, watc_password=None, iris_only=True,
-                          verbose=True):
+                          verbose=True, parallel=False, cores=None):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
@@ -435,7 +435,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                             trim_fill_value=False,
                                             remove_response=remove_response,
                                             return_failed_stations=True,
-                                            verbose=verbose)
+                                            verbose=verbose, parallel=parallel, cores=cores)
     st_out += iris_st
 
     # If IRIS couldn't grab all stations in requested station list, try WATC
@@ -465,7 +465,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                         watc_url=watc_url,
                                                         watc_username=watc_username,
                                                         watc_password=watc_password,
-                                                        verbose=verbose)
+                                                        verbose=verbose, parallel=parallel, cores=cores)
             else:
                 # Return an empty Stream and same failed stations
                 watc_st = Stream()
@@ -489,7 +489,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                             trim_fill_value=False,
                                                             remove_response=remove_response,
                                                             return_failed_stations=True,
-                                                            verbose=verbose)
+                                                            verbose=verbose, parallel=parallel, cores=cores)
 
                 if remaining_failed:
                     log('--------------')
@@ -658,7 +658,7 @@ def get_increment_waveforms(args):
 def parallel_gather(client, network, station, location, channel, starttime,
                      endtime, cores, increment_s=12*60*60):
     """
-    Gather waveforms incrementally and in parallel using multiple cores.
+    Gather waveforms incrementally and parallelize by time, station, or location using multiple cores.
 
     Args:
         client (obspy.clients.fdsn.Client): The FDSN client to use for data retrieval.
@@ -676,27 +676,49 @@ def parallel_gather(client, network, station, location, channel, starttime,
     Returns:
         obspy.core.stream.Stream: Combined stream of gathered waveforms.
     """
+    if cores is None:  # Check if cores is specified
+        warnings.warn("Number of cores not specified. Using available cores - 2.", CollectionWarning)
+        cores = os.cpu_count() -2
+
     if cores > os.cpu_count():  # Check if requested cores exceeds available cores
         warnings.warn(f"Number of cores requested ({cores}) exceeds number of available cores ({os.cpu_count()}). "
                       f"Using {os.cpu_count()} cores instead.", CollectionWarning)
         cores = os.cpu_count()
 
-    time_ranges = []
+    if len(station.split(',')) == 1:  # For a single station, parallelize by either time windows or locations.
+        inv = client.get_stations(network=network, station=station,
+                                  starttime=starttime, endtime=endtime, level="channel")
+        for net in inv:
+            for sta in net:
+                locs = [channel.location_code for channel in sta]  # Get location codes
 
-    increment_start = starttime
-    while increment_start < endtime:
-        increment_end = min(increment_start + increment_s, endtime)  # selects end time of the increment
-        if increment_end > increment_start:
-            time_ranges.append((increment_start, increment_end))  # appends the start and end time of the increment
-        increment_start = increment_end  # updates new increment start time
+        if len(locs) > 2:  # For more than 2 locations (meant for arrays), parallelize by locations instead of time
+            with Pool(processes=cores) as pool:
+                results = pool.map(get_increment_waveforms,
+                                   [(client, network, station, locations, channel, starttime, endtime) for locations in locs])
 
-    with Pool(processes=cores) as pool:  # Use multiprocess to gather data in parallel
-        results = pool.map(get_increment_waveforms,
-                           [(client, network, station, location, channel, times[0], times[1]) for times in time_ranges])
+        else:  # For a single location, parallelize by time windows
+            time_ranges = []
+            increment_start = starttime
+            while increment_start < endtime:
+                increment_end = min(increment_start + increment_s, endtime)  # selects end time of the increment
+                if increment_end > increment_start:
+                    time_ranges.append((increment_start, increment_end))  # appends the start and end time of the increment
+                increment_start = increment_end  # updates new increment start time
 
-    combined_stream = Stream()
+            with Pool(processes=cores) as pool:  # Use multiprocess to gather data in parallel
+                results = pool.map(get_increment_waveforms,
+                                   [(client, network, station, location, channel, times[0], times[1]) for times in time_ranges])
+
+    else:  # For multiple stations, parallelize by stations
+        station = station.split(',')  # Split the station string into a list of strings
+
+        with Pool(processes=cores) as pool:
+            results = pool.map(get_increment_waveforms,
+                               [(client, network, stations, location, channel, starttime, endtime) for stations in station])
+
+    combined_stream = Stream()  # Initialize empty Stream object
     for st_inc in results:  # Combine all the streams into one
         combined_stream += st_inc
-    combined_stream.merge(method=0, fill_value=0)
 
     return combined_stream
