@@ -6,6 +6,7 @@ from obspy import Inventory, Stream
 from multiprocess import Pool
 import numpy as np
 import os
+import sys
 import fnmatch
 import warnings
 from . import CollectionWarning
@@ -93,6 +94,21 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     # Check for issues with fill value args
     if merge_fill_value is True or trim_fill_value is True:
         raise ValueError('Cannot provide True to fill value parameters.')
+
+    if parallel:  # Check if parallel processing is necessary
+        duration = endtime - starttime
+        if duration <= 86400 * 5:  # 5 days in seconds
+            user_input = input("Length of data is short enough that gathering in parallel may be slower.\n Continue? Type [y]/[n]: ")
+            if user_input == 'n':
+                log("Switching to regular waveform gathering.")
+                parallel = False
+            elif user_input == 'y':
+                log("Continuing in parallel.")
+            else:
+                log("Invalid input. Exiting.....")
+                return
+
+
 
     log('--------------')
     if parallel:
@@ -653,7 +669,7 @@ def get_increment_waveforms(args):
 
 
 def parallel_gather(client, network, station, location, channel, starttime,
-                     endtime, cores, increment_s=12*60*60):
+                     endtime, cores, increment_s=24*60*60):
     """
     Gather waveforms incrementally and parallelize by time, station, or location using multiple cores.
 
@@ -668,7 +684,7 @@ def parallel_gather(client, network, station, location, channel, starttime,
         endtime (:class:`~obspy.core.utcdatetime.UTCDateTime`): End time for
             data request
         cores (int): Number of cores to use for parallel processing.
-        increment_s (int, optional): Time increment in seconds for each parallel task. Default is 12 hours (43200 seconds).
+        increment_s (int, optional): Time increment in seconds for each parallel task. Default is 24 hours (86400 seconds).
 
     Returns:
         obspy.core.stream.Stream: Combined stream of gathered waveforms.
@@ -682,37 +698,23 @@ def parallel_gather(client, network, station, location, channel, starttime,
                       f"Using {os.cpu_count()} cores instead.", CollectionWarning)
         cores = os.cpu_count()
 
-    if len(station.split(',')) == 1:  # For a single station, parallelize by either time windows or locations.
-        inv = client.get_stations(network=network, station=station,
-                                  starttime=starttime, endtime=endtime, level="channel")
-        for net in inv:
-            for sta in net:
-                locs = [channel.location_code for channel in sta]  # Get location codes
+    if len(station.split(',')) == 1:  # For a single station, parallelize by time windows.
+        time_ranges = []
+        increment_start = starttime
+        while increment_start < endtime:
+            increment_end = min(increment_start + increment_s, endtime)  # selects end time of the increment
+            if increment_end > increment_start:
+                time_ranges.append((increment_start, increment_end))  # appends the start and end time of the increment
+            increment_start = increment_end  # updates new increment start time
 
-        if len(locs) > 2:  # For more than 2 locations (meant for arrays), parallelize by locations instead of time
-            with Pool(processes=cores) as pool:
-                results = pool.map(get_increment_waveforms,
-                                   [(client, network, station, locations, channel, starttime, endtime) for locations in locs])
-
-        else:  # For a single location, parallelize by time windows
-            time_ranges = []
-            increment_start = starttime
-            while increment_start < endtime:
-                increment_end = min(increment_start + increment_s, endtime)  # selects end time of the increment
-                if increment_end > increment_start:
-                    time_ranges.append((increment_start, increment_end))  # appends the start and end time of the increment
-                increment_start = increment_end  # updates new increment start time
-
-            with Pool(processes=cores) as pool:  # Use multiprocess to gather data in parallel
-                results = pool.map(get_increment_waveforms,
-                                   [(client, network, station, location, channel, times[0], times[1]) for times in time_ranges])
+        with Pool(processes=cores) as pool:  # Use multiprocess to gather data in parallel
+            results = pool.map(get_increment_waveforms, [(client, network, station, location, channel, times[0], times[1]) for times in time_ranges])
 
     else:  # For multiple stations, parallelize by stations
         station = station.split(',')  # Split the station string into a list of strings
 
         with Pool(processes=cores) as pool:
-            results = pool.map(get_increment_waveforms,
-                               [(client, network, stations, location, channel, starttime, endtime) for stations in station])
+            results = pool.map(get_increment_waveforms, [(client, network, stations, location, channel, starttime, endtime) for stations in station])
 
     combined_stream = Stream()  # Initialize empty Stream object
     for st_inc in results:  # Combine all the streams into one
