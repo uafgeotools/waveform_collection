@@ -97,18 +97,16 @@ def gather_waveforms(source, network, station, location, channel, starttime,
 
     if parallel:  # Check if parallel processing is necessary
         duration = endtime - starttime
-        if duration <= 86400 * 5:  # 5 days in seconds
+        if duration < 86400 * 1:  # 1 days in seconds
             user_input = input("Length of data is short enough that gathering in parallel may be slower.\n Continue? Type [y]/[n]: ")
-            if user_input == 'n':
+            if user_input == 'n' or 'N':
                 log("Switching to regular waveform gathering.")
                 parallel = False
-            elif user_input == 'y':
+            elif user_input == 'y' or 'Y':
                 log("Continuing in parallel.")
             else:
                 log("Invalid input. Exiting.....")
                 return
-
-
 
     log('--------------')
     if parallel:
@@ -698,7 +696,7 @@ def parallel_gather(client, network, station, location, channel, starttime,
                       f"Using {os.cpu_count()} cores instead.", CollectionWarning)
         cores = os.cpu_count()
 
-    if len(station.split(',')) == 1:  # For a single station, parallelize by time windows.
+    if len(station.split(',')) < cores:  # If fewer stations than cores, parallelize by time windows.
         time_ranges = []
         increment_start = starttime
         while increment_start < endtime:
@@ -710,7 +708,7 @@ def parallel_gather(client, network, station, location, channel, starttime,
         with Pool(processes=cores) as pool:  # Use multiprocess to gather data in parallel
             results = pool.map(get_increment_waveforms, [(client, network, station, location, channel, times[0], times[1]) for times in time_ranges])
 
-    else:  # For multiple stations, parallelize by stations
+    else:  # For more stations than cores, parallelize by stations
         station = station.split(',')  # Split the station string into a list of strings
 
         with Pool(processes=cores) as pool:
