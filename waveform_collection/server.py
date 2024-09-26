@@ -98,15 +98,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     if parallel:  # Check if parallel processing is necessary
         duration = endtime - starttime
         if duration < 86400 * 1:  # 1 days in seconds
-            user_input = input("Length of data is short enough that gathering in parallel may be slower.\n Continue? Type [y]/[n]: ")
-            if user_input == 'n' or 'N':
-                log("Switching to regular waveform gathering.")
-                parallel = False
-            elif user_input == 'y' or 'Y':
-                log("Continuing in parallel.")
-            else:
-                log("Invalid input. Exiting.....")
-                return
+            warnings.warn("Length of data is short enough that gathering in parallel may be slower.",CollectionWarning)
 
     log('--------------')
     if parallel:

@@ -14,7 +14,7 @@ st = gather_waveforms(source='IRIS', network='AV', station='DLL',
 
 st_bulk = gather_waveforms_bulk(lon_0=-153.0918, lat_0=60.0319, max_radius=200,
                                 starttime=STARTTIME, endtime=ENDTIME,
-                                channel='BHN', parallel=False, cores=None)
+                                channel='BHN', parallel=False, cores=7)
 # gather_waveforms_bulk can also be run in parallel, faster for ~>1 day of data
 
 #%% Example 3 - Gather 10 days of 3-component seismic data from SSLS in parallel using 6 cores.
