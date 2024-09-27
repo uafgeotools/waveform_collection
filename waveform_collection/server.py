@@ -81,6 +81,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
             Default is `True`.
         n_jobs (int): Number of CPUs to use for parallel processing.
             If n_jobs = -1, all CPUs are used. If n_jobs < -1, (n_cpus + 1 + n_jobs) are used.
+            Default is 1 (a single processor).
 
     Returns:
         :class:`~obspy.core.stream.Stream` containing gathered waveforms. If
