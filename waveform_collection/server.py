@@ -6,7 +6,6 @@ from obspy import Inventory, Stream
 from multiprocess import Pool
 import numpy as np
 import os
-import sys
 import fnmatch
 import warnings
 from . import CollectionWarning
@@ -23,7 +22,7 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                      endtime, time_buffer=0, merge_fill_value=0,
                      trim_fill_value=0, remove_response=False,
                      return_failed_stations=False, watc_url=None,
-                     watc_username=None, watc_password=None, verbose=True, parallel=False, cores=None):
+                     watc_username=None, watc_password=None, verbose=True, n_jobs=1):
     """
     Gather seismic/infrasound waveforms from any ObsPy-supported FDSN
     (see https://docs.obspy.org/packages/obspy.clients.fdsn.html), WATC FDSN, 
@@ -80,8 +79,8 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         watc_password (str): Password for WATC FDSN server
         verbose (bool): If `False`, all print statements will be blocked. 
             Default is `True`.
-        parallel (bool): If `True`, use increments and parallel processing to download data
-        cores (int): Number of cores to use for parallel processing
+        n_jobs (int): Number of CPUs to use for parallel processing.
+            If n_jobs = -1, all CPUs are used. If n_jobs < -1, (n_cpus + 1 + n_jobs) are used.
 
     Returns:
         :class:`~obspy.core.stream.Stream` containing gathered waveforms. If
@@ -95,13 +94,13 @@ def gather_waveforms(source, network, station, location, channel, starttime,
     if merge_fill_value is True or trim_fill_value is True:
         raise ValueError('Cannot provide True to fill value parameters.')
 
-    if parallel:  # Check if parallel processing is necessary
+    if n_jobs != 1:  # Check if parallel processing is necessary
         duration = endtime - starttime
         if duration < 86400 * 1:  # 1 days in seconds
             warnings.warn("Length of data is short enough that gathering in parallel may be slower.",CollectionWarning)
 
     log('--------------')
-    if parallel:
+    if n_jobs != 1:
         log('GATHERING DATA IN PARALLEL')
     else:
         log('GATHERING DATA')
@@ -120,9 +119,10 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                              password=watc_password)
         log('Successfully connected. Reading data from WATC FDSN...')
         try:
-            if parallel:
-                st_out = parallel_gather(client, network, station, location,
-                                         channel, starttime, endtime + time_buffer, cores)
+            if n_jobs !=1:
+                st_out = parallel_gather(source, network, station,location, channel,
+                                         starttime, endtime + time_buffer, n_jobs,
+                                         watc_url, watc_username, watc_password)
             else:
                 st_out = client.get_waveforms(network, station, location, channel,
                                               starttime, endtime + time_buffer,
@@ -143,9 +143,9 @@ def gather_waveforms(source, network, station, location, channel, starttime,
                 for cha in _restricted_matching('channel', channel, client, network=nw, station=sta):
                     for loc in _restricted_matching('location', location, client, network=nw, station=sta, channel=cha):
                         try:
-                            if parallel:
-                                st_out = parallel_gather(client, nw, sta, loc,
-                                                         cha, starttime, endtime + time_buffer, cores)
+                            if n_jobs != 1:
+                                st_out = parallel_gather(source, network, station, location, channel,
+                                                         starttime, endtime + time_buffer, n_jobs)
                             else:
                                 st_out += client.get_waveforms(nw, sta, loc, cha, starttime, endtime + time_buffer)
                         except KeyError:
@@ -156,9 +156,9 @@ def gather_waveforms(source, network, station, location, channel, starttime,
         client = FDSN_Client(source)
         log('Reading data from %s FDSN...' % source)
         try:
-            if parallel:
-                st_out = parallel_gather(client, network, station, location,
-                                         channel, starttime, endtime + time_buffer, cores)
+            if n_jobs != 1:
+                st_out = parallel_gather(source, network, station, location, channel,
+                                         starttime, endtime + time_buffer, n_jobs)
             else:
                 st_out = client.get_waveforms(network, station, location, channel,
                                               starttime, endtime + time_buffer,
@@ -287,7 +287,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                           time_buffer=0, merge_fill_value=0, trim_fill_value=0,
                           remove_response=False, watc_url=None,
                           watc_username=None, watc_password=None, iris_only=True,
-                          verbose=True, parallel=False, cores=None):
+                          verbose=True, n_jobs= 1):
     """
     Bulk gather infrasound waveforms within a specified maximum radius of a
     specified location. Waveforms are gathered from IRIS (and optionally WATC)
@@ -344,6 +344,8 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
         iris_only (bool): If `True`, only the IRIS FDSN source is used
         verbose (bool): If `False`, all print statements will be blocked. 
             Default is `True`.
+        n_jobs (int): Number of CPUs to use for parallel processing.
+            If n_jobs = -1, all CPUs are used. If n_jobs < -1, (n_cpus + 1 + n_jobs) are used.
 
     Returns:
         :class:`~obspy.core.stream.Stream` containing bulk gathered waveforms
@@ -438,7 +440,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                             trim_fill_value=False,
                                             remove_response=remove_response,
                                             return_failed_stations=True,
-                                            verbose=verbose, parallel=parallel, cores=cores)
+                                            verbose=verbose, n_jobs=n_jobs)
     st_out += iris_st
 
     # If IRIS couldn't grab all stations in requested station list, try WATC
@@ -468,7 +470,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                         watc_url=watc_url,
                                                         watc_username=watc_username,
                                                         watc_password=watc_password,
-                                                        verbose=verbose, parallel=parallel, cores=cores)
+                                                        verbose=verbose, n_jobs=n_jobs)
             else:
                 # Return an empty Stream and same failed stations
                 watc_st = Stream()
@@ -492,7 +494,7 @@ def gather_waveforms_bulk(lon_0, lat_0, max_radius, starttime, endtime,
                                                             trim_fill_value=False,
                                                             remove_response=remove_response,
                                                             return_failed_stations=True,
-                                                            verbose=verbose, parallel=parallel, cores=cores)
+                                                            verbose=verbose, n_jobs=n_jobs)
 
                 if remaining_failed:
                     log('--------------')
@@ -638,18 +640,30 @@ def get_increment_waveforms(args):
 
     Args:
         args (tuple): A tuple containing the following elements:
-            client (obspy.clients.fdsn.Client): The FDSN client to use for data retrieval.
+            source (str): The data source to use for waveform retrieval.
             network (str): SEED network code [wildcards (``*``, ``?``) accepted].
             station (str): SEED station code [wildcards (``*``, ``?``) accepted].
             location (str): SEED location code [wildcards (``*``, ``?``) accepted].
             channel (str): SEED channel code [wildcards (``*``, ``?``) accepted].
             starttime (obspy.core.utcdatetime.UTCDateTime): Start time for data request.
             endtime (obspy.core.utcdatetime.UTCDateTime): End time for data request.
+            watc_url (str, optional): URL for WATC FDSN server.
+            watc_username (str, optional): Username for WATC FDSN server.
+            watc_password (str, optional): Password for WATC FDSN server.
 
     Returns:
         obspy.core.stream.Stream: Stream of gathered waveforms for the specified time increment.
     """
-    client, network, station, location, channel, starttime, endtime = args
+    source, network, station, location, channel, starttime, endtime, watc_url, watc_username, watc_password = args
+    # reestablish clients ( Pool.map() cannot pickle clients ).
+    if source == 'WATC':
+        client = FDSN_Client(base_url=watc_url, user=watc_username,
+                             password=watc_password)
+    elif source == 'AVO':
+        client = EW_Client('pubavo1.wr.usgs.gov', port=16023)  # 16023 is long-term
+    else:
+        client = FDSN_Client(source)
+
     try:
         st_inc = client.get_waveforms(network=network, station=station, location=location, channel=channel,
                                   starttime=starttime, endtime=endtime, attach_response=True)
@@ -658,37 +672,45 @@ def get_increment_waveforms(args):
         return Stream()  # Just create an empty Stream object
 
 
-def parallel_gather(client, network, station, location, channel, starttime,
-                     endtime, cores, increment_s=24*60*60):
+def parallel_gather(source, network, station, location, channel, starttime,
+                     endtime, n_jobs, watc_url=None, watc_username=None, watc_password=None, increment_s=24*60*60):
     """
     Gather waveforms incrementally and parallelize by time, station, or location using multiple cores.
 
     Args:
-        client (obspy.clients.fdsn.Client): The FDSN client to use for data retrieval.
-        network (str): SEED network code [wildcards (``*``, ``?``) accepted]
-        station (str): SEED station code [wildcards (``*``, ``?``) accepted]
-        location (str): SEED location code [wildcards (``*``, ``?``) accepted]
-        channel (str): SEED channel code [wildcards (``*``, ``?``) accepted]
-        starttime (:class:`~obspy.core.utcdatetime.UTCDateTime`): Start time for
-            data request
-        endtime (:class:`~obspy.core.utcdatetime.UTCDateTime`): End time for
-            data request
-        cores (int): Number of cores to use for parallel processing.
-        increment_s (int, optional): Time increment in seconds for each parallel task. Default is 24 hours (86400 seconds).
+        source (str): The data source to use for waveform retrieval.
+        network (str): SEED network code [wildcards (``*``, ``?``) accepted].
+        station (str): SEED station code [wildcards (``*``, ``?``) accepted].
+        location (str): SEED location code [wildcards (``*``, ``?``) accepted].
+        channel (str): SEED channel code [wildcards (``*``, ``?``) accepted].
+        starttime (obspy.core.utcdatetime.UTCDateTime): Start time for data request.
+        endtime (obspy.core.utcdatetime.UTCDateTime): End time for data request.
+        n_jobs (int): Number of CPUs to use for parallel processing.
+            If n_jobs = -1, all CPUs are used. If n_jobs < -1, (n_cpus + 1 + n_jobs) are used.
+        watc_url (str, optional): URL for WATC FDSN server.
+        watc_username (str, optional): Username for WATC FDSN server.
+        watc_password (str, optional): Password for WATC FDSN server.
+        increment_s (int, optional): Time increment in seconds for each parallel task.
+            Default is 24 hours (86400 seconds).
 
     Returns:
         obspy.core.stream.Stream: Combined stream of gathered waveforms.
     """
-    if cores is None:  # Check if cores is specified
-        warnings.warn("Number of cores not specified. Using available cores - 2.", CollectionWarning)
-        cores = os.cpu_count() -2
 
-    if cores > os.cpu_count():  # Check if requested cores exceeds available cores
-        warnings.warn(f"Number of cores requested ({cores}) exceeds number of available cores ({os.cpu_count()}). "
-                      f"Using {os.cpu_count()} cores instead.", CollectionWarning)
+    if n_jobs < 0:
+        cores = os.cpu_count() + 1 + n_jobs
+        if cores < 1:
+            warnings.warn("Number of cores requested is less than 1. Using 1 core instead.", CollectionWarning)
+            cores = 1
+    elif n_jobs > os.cpu_count():
+        warnings.warn("Number of cores requested is greater than available cores. Using all available cores instead.", CollectionWarning)
         cores = os.cpu_count()
+    elif n_jobs == 0:
+        raise ValueError("Number of cores requested is 0. Please specify n_jobs greater or less than 0.")
+    else:
+        cores = n_jobs
 
-    if len(station.split(',')) < cores:  # If fewer stations than cores, parallelize by time windows.
+    if len(station.split(',')) < cores:  # If fewer stations than cores selected, parallelize by time windows.
         time_ranges = []
         increment_start = starttime
         while increment_start < endtime:
@@ -698,13 +720,13 @@ def parallel_gather(client, network, station, location, channel, starttime,
             increment_start = increment_end  # updates new increment start time
 
         with Pool(processes=cores) as pool:  # Use multiprocess to gather data in parallel
-            results = pool.map(get_increment_waveforms, [(client, network, station, location, channel, times[0], times[1]) for times in time_ranges])
+            results = pool.map(get_increment_waveforms, [(source, network, station, location, channel, times[0], times[1], watc_url, watc_username, watc_password) for times in time_ranges])
 
     else:  # For more stations than cores, parallelize by stations
         station = station.split(',')  # Split the station string into a list of strings
 
         with Pool(processes=cores) as pool:
-            results = pool.map(get_increment_waveforms, [(client, network, stations, location, channel, starttime, endtime) for stations in station])
+            results = pool.map(get_increment_waveforms, [(source, network, stations, location, channel, starttime, endtime, watc_url, watc_username, watc_password) for stations in station])
 
     combined_stream = Stream()  # Initialize empty Stream object
     for st_inc in results:  # Combine all the streams into one
