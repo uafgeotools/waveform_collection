@@ -27,7 +27,8 @@ napoleon_numpy_docstring = False
 master_doc = 'index'
 
 autodoc_mock_imports = ['numpy',
-                        'obspy'
+                        'obspy',
+                        'multiprocess'
                         ]
 
 apidoc_module_dir = '../waveform_collection'
@@ -48,5 +49,6 @@ apidoc_excluded_paths = ['local/cd11.py',
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'numpy': ('https://docs.scipy.org/doc/numpy', None),
-    'obspy': ('https://docs.obspy.org/', None)
+    'obspy': ('https://docs.obspy.org/', None),
+    'multiprocess': ('https://multiprocess.readthedocs.io/', None)
 }

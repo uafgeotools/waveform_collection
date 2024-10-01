@@ -17,9 +17,9 @@ the packages listed in the [Dependencies](#dependencies) section.)
 To create a new conda environment for use with this and other _uafgeotools_
 packages, execute the following terminal command:
 ```
-$ conda create -n uafinfra -c conda-forge obspy
+$ conda create -n uafinfra -c conda-forge obspy multiprocess
 ```
-This creates a new environment called `uafinfra` with ObsPy and its dependencies
+This creates a new environment called `uafinfra` with ObsPy, multiprocess, and their dependencies
 installed.
 
 To install _waveform_collection_, execute the following terminal commands:
@@ -39,6 +39,7 @@ Dependencies
 Python packages:
 
 * [ObsPy](http://docs.obspy.org/)
+* [multiprocess](https://multiprocess.readthedocs.io/)
 
 ...and its dependencies, which you don't really have to be concerned about if
 you're using conda!
@@ -63,6 +64,7 @@ Authors
 
 David Fee<br>
 Julia Gestrich<br>
+Logan Scamfer<br>
 Darren Tan<br>
 Liam Toney<br>
 Andrew Winkelman
