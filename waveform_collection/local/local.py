@@ -11,7 +11,7 @@ OUTLIER_THRESHOLD = 1e19  # [Pa] Units of Pa since we're assuming response
 
 
 def read_local(data_dir, coord_file, network, station, location, channel,
-               starttime, endtime, merge=True):
+               starttime, endtime, merge=True, verbose=True):
     """
     Read in waveforms from "local" 1-hour, IRIS-compliant miniSEED files, and
     output a :class:`~obspy.core.stream.Stream` with station/element coordinates
@@ -42,14 +42,18 @@ def read_local(data_dir, coord_file, network, station, location, channel,
             data request
         merge (bool): Toggle merging of :class:`~obspy.core.trace.Trace` objects
             with identical IDs
+        verbose (bool): If `False`, all print statements will be blocked.
+            Default is `True`.
 
     Returns:
         :class:`~obspy.core.stream.Stream` containing gathered waveforms
     """
+    # log() does nothing if `verbose=False`
+    log = print if verbose else lambda *args, **kwargs: None
 
-    print('-----------------------------')
-    print('GATHERING LOCAL MINISEED DATA')
-    print('-----------------------------')
+    log('-----------------------------')
+    log('GATHERING LOCAL MINISEED DATA')
+    log('-----------------------------')
 
     # Take (hour) floor of starttime
     starttime_hr = UTCDateTime(starttime.year, starttime.month, starttime.day,
@@ -88,11 +92,11 @@ def read_local(data_dir, coord_file, network, station, location, channel,
 
     # If the Stream is empty, then we can stop here
     if st_out.count() == 0:
-        print('No data downloaded.')
+        log('No data downloaded.')
         return st_out
 
     # Otherwise, show what the Stream contains
-    print(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
+    log(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
 
     # Add zeros to ensure all Traces have same length
     st_out.trim(starttime, endtime, pad=True, fill_value=0)
@@ -101,12 +105,12 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     for tr in st_out:
         d0 = np.where(tr.data > OUTLIER_THRESHOLD)[0]
         if d0.any():
-            print(f'{len(d0)} data points in {tr.id} were outliers with '
+            log(f'{len(d0)} data points in {tr.id} were outliers with '
                   f' values > {OUTLIER_THRESHOLD} and are now set to 0')
         tr.data[d0] = 0
 
 
-    print('Assigning coordinates...')
+    log('Assigning coordinates...')
 
     # Assign coordinates by searching through user-supplied JSON file
     local_coords = load_json_file(coord_file)
@@ -115,10 +119,10 @@ def read_local(data_dir, coord_file, network, station, location, channel,
             tr.stats.latitude, tr.stats.longitude,\
                 tr.stats.elevation = local_coords[tr.stats.station]
         except KeyError:
-            print(f'No coordinates available for {tr.id}. Stopping.')
+            log(f'No coordinates available for {tr.id}. Stopping.')
             raise
 
-    print('Done')
+    log('Done')
 
     # Return the Stream with coordinates attached
     return st_out
