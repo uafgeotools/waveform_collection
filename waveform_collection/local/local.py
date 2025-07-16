@@ -3,6 +3,7 @@ import numpy as np
 import glob
 import os
 from .common import load_json_file
+from itertools import product
 
 
 HR2SEC = 3600   # [s/hr]
@@ -63,8 +64,11 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     endtime_hr = UTCDateTime(endtime.year, endtime.month, endtime.day,
                              endtime.hour)
 
-    # Define filename template
-    template = f'{network}.{station}.{location}.{channel}.{{}}.{{}}.{{}}'
+    # Convert comma-delimited strings into lists, trimming whitespace
+    networks = [x.strip() for x in network.split(',')]
+    stations = [x.strip() for x in station.split(',')]
+    locations = [x.strip() for x in location.split(',')]
+    channels = [x.strip() for x in channel.split(',')]
 
     # Initialize Stream object
     st_out = Stream()
@@ -75,14 +79,17 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     # Cycle forward in time, advancing hour by hour through miniSEED files
     while tmp_time <= endtime_hr:
 
-        pattern = template.format(tmp_time.strftime('%Y'),
-                                  tmp_time.strftime('%j'),
-                                  tmp_time.strftime('%H'))
+        # Define year, julian day and hour for miniSEED pattern
+        year = tmp_time.strftime('%Y')
+        jday = tmp_time.strftime('%j')
+        hour = tmp_time.strftime('%H')
 
-        files = glob.glob(os.path.join(data_dir, pattern))
-
-        for file in files:
-            st_out += read(file)
+        # Loop through all SCNL combinations
+        for net, sta, loc, cha in product(networks, stations, locations, channels):
+            pattern = f'{net}.{sta}.{loc}.{cha}.{year}.{jday}.{hour}'
+            files = glob.glob(os.path.join(data_dir, pattern))
+            for file in files:
+                st_out += read(file)
 
         tmp_time += HR2SEC  # Add an hour!
 
