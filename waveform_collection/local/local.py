@@ -12,7 +12,7 @@ OUTLIER_THRESHOLD = 1e19  # [Pa] Units of Pa since we're assuming response
 
 
 def read_local(data_dir, coord_file, network, station, location, channel,
-               starttime, endtime, merge=True, verbose=True):
+               starttime, endtime, pattern='{net}.{sta}.{loc}.{cha}.{year}.{jday}.{hour}', merge=True, verbose=True):
     """
     Read in waveforms from "local" 1-hour, IRIS-compliant miniSEED files, and
     output a :class:`~obspy.core.stream.Stream` with station/element coordinates
@@ -23,6 +23,8 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     The expected naming convention for the miniSEED files is
 
     ``<network>.<station>.<location>.<channel>.<year>.<julian_day>.<hour>``
+
+    but this can be modified by changing the ``pattern`` argument.
 
     **NOTE 2**
 
@@ -41,6 +43,8 @@ def read_local(data_dir, coord_file, network, station, location, channel,
             data request
         endtime (:class:`~obspy.core.utcdatetime.UTCDateTime`): End time for
             data request
+        pattern (str): Pattern for miniSEED filenames. Valid keys are
+            ``net``, ``sta``, ``loc``, ``cha``, ``year``, ``jday``, and ``hour``.
         merge (bool): Toggle merging of :class:`~obspy.core.trace.Trace` objects
             with identical IDs
         verbose (bool): If `False`, all print statements will be blocked.
@@ -86,8 +90,8 @@ def read_local(data_dir, coord_file, network, station, location, channel,
 
         # Loop through all SCNL combinations
         for net, sta, loc, cha in product(networks, stations, locations, channels):
-            pattern = f'{net}.{sta}.{loc}.{cha}.{year}.{jday}.{hour}'
-            files = glob.glob(os.path.join(data_dir, pattern))
+            glob_pattern = pattern.format(net=net, sta=sta, loc=loc, cha=cha, year=year, jday=jday, hour=hour)
+            files = glob.glob(os.path.join(data_dir, glob_pattern))
             for file in files:
                 st_out += read(file)
 
