@@ -3,6 +3,7 @@ import numpy as np
 import glob
 import os
 from .common import load_json_file
+from itertools import product
 
 
 HR2SEC = 3600   # [s/hr]
@@ -11,7 +12,7 @@ OUTLIER_THRESHOLD = 1e19  # [Pa] Units of Pa since we're assuming response
 
 
 def read_local(data_dir, coord_file, network, station, location, channel,
-               starttime, endtime, merge=True):
+               starttime, endtime, pattern='{net}.{sta}.{loc}.{cha}.{year}.{jday}.{hour}', merge=True, verbose=True):
     """
     Read in waveforms from "local" 1-hour, IRIS-compliant miniSEED files, and
     output a :class:`~obspy.core.stream.Stream` with station/element coordinates
@@ -22,6 +23,8 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     The expected naming convention for the miniSEED files is
 
     ``<network>.<station>.<location>.<channel>.<year>.<julian_day>.<hour>``
+
+    but this can be modified by changing the ``pattern`` argument.
 
     **NOTE 2**
 
@@ -40,16 +43,22 @@ def read_local(data_dir, coord_file, network, station, location, channel,
             data request
         endtime (:class:`~obspy.core.utcdatetime.UTCDateTime`): End time for
             data request
+        pattern (str): Pattern for miniSEED filenames. Valid keys are
+            ``net``, ``sta``, ``loc``, ``cha``, ``year``, ``jday``, and ``hour``.
         merge (bool): Toggle merging of :class:`~obspy.core.trace.Trace` objects
             with identical IDs
+        verbose (bool): If `False`, all print statements will be blocked.
+            Default is `True`.
 
     Returns:
         :class:`~obspy.core.stream.Stream` containing gathered waveforms
     """
+    # log() does nothing if `verbose=False`
+    log = print if verbose else lambda *args, **kwargs: None
 
-    print('-----------------------------')
-    print('GATHERING LOCAL MINISEED DATA')
-    print('-----------------------------')
+    log('-----------------------------')
+    log('GATHERING LOCAL MINISEED DATA')
+    log('-----------------------------')
 
     # Take (hour) floor of starttime
     starttime_hr = UTCDateTime(starttime.year, starttime.month, starttime.day,
@@ -59,8 +68,11 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     endtime_hr = UTCDateTime(endtime.year, endtime.month, endtime.day,
                              endtime.hour)
 
-    # Define filename template
-    template = f'{network}.{station}.{location}.{channel}.{{}}.{{}}.{{}}'
+    # Convert comma-delimited strings into lists, trimming whitespace
+    networks = [x.strip() for x in network.split(',')]
+    stations = [x.strip() for x in station.split(',')]
+    locations = [x.strip() for x in location.split(',')]
+    channels = [x.strip() for x in channel.split(',')]
 
     # Initialize Stream object
     st_out = Stream()
@@ -71,14 +83,17 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     # Cycle forward in time, advancing hour by hour through miniSEED files
     while tmp_time <= endtime_hr:
 
-        pattern = template.format(tmp_time.strftime('%Y'),
-                                  tmp_time.strftime('%j'),
-                                  tmp_time.strftime('%H'))
+        # Define year, julian day and hour for miniSEED pattern
+        year = tmp_time.strftime('%Y')
+        jday = tmp_time.strftime('%j')
+        hour = tmp_time.strftime('%H')
 
-        files = glob.glob(os.path.join(data_dir, pattern))
-
-        for file in files:
-            st_out += read(file)
+        # Loop through all SCNL combinations
+        for net, sta, loc, cha in product(networks, stations, locations, channels):
+            glob_pattern = pattern.format(net=net, sta=sta, loc=loc, cha=cha, year=year, jday=jday, hour=hour)
+            files = glob.glob(os.path.join(data_dir, glob_pattern))
+            for file in files:
+                st_out += read(file)
 
         tmp_time += HR2SEC  # Add an hour!
 
@@ -88,11 +103,11 @@ def read_local(data_dir, coord_file, network, station, location, channel,
 
     # If the Stream is empty, then we can stop here
     if st_out.count() == 0:
-        print('No data downloaded.')
+        log('No data downloaded.')
         return st_out
 
     # Otherwise, show what the Stream contains
-    print(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
+    log(st_out.__str__(extended=True))  # This syntax prints the WHOLE Stream
 
     # Add zeros to ensure all Traces have same length
     st_out.trim(starttime, endtime, pad=True, fill_value=0)
@@ -101,24 +116,24 @@ def read_local(data_dir, coord_file, network, station, location, channel,
     for tr in st_out:
         d0 = np.where(tr.data > OUTLIER_THRESHOLD)[0]
         if d0.any():
-            print(f'{len(d0)} data points in {tr.id} were outliers with '
+            log(f'{len(d0)} data points in {tr.id} were outliers with '
                   f' values > {OUTLIER_THRESHOLD} and are now set to 0')
         tr.data[d0] = 0
 
 
-    print('Assigning coordinates...')
-
-    # Assign coordinates by searching through user-supplied JSON file
-    local_coords = load_json_file(coord_file)
-    for tr in st_out:
-        try:
-            tr.stats.latitude, tr.stats.longitude,\
-                tr.stats.elevation = local_coords[tr.stats.station]
-        except KeyError:
-            print(f'No coordinates available for {tr.id}. Stopping.')
-            raise
-
-    print('Done')
+    log('Assigning coordinates...')
+    if coord_file is None:
+        log('No coord_file provided; skipping coordinate assignment.')
+    else:
+        local_coords = load_json_file(coord_file)
+        for tr in st_out:
+            try:
+                tr.stats.latitude, tr.stats.longitude, \
+                    tr.stats.elevation = local_coords[tr.stats.station]
+            except KeyError:
+                log(f'No coordinates available for {tr.id}. Skipping.')
+                pass
+        log('Done')
 
     # Return the Stream with coordinates attached
     return st_out
