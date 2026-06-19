@@ -122,18 +122,18 @@ def read_local(data_dir, coord_file, network, station, location, channel,
 
 
     log('Assigning coordinates...')
-
-    # Assign coordinates by searching through user-supplied JSON file
-    local_coords = load_json_file(coord_file)
-    for tr in st_out:
-        try:
-            tr.stats.latitude, tr.stats.longitude,\
-                tr.stats.elevation = local_coords[tr.stats.station]
-        except KeyError:
-            log(f'No coordinates available for {tr.id}. Stopping.')
-            raise
-
-    log('Done')
+    if coord_file is None:
+        log('No coord_file provided; skipping coordinate assignment.')
+    else:
+        local_coords = load_json_file(coord_file)
+        for tr in st_out:
+            try:
+                tr.stats.latitude, tr.stats.longitude, \
+                    tr.stats.elevation = local_coords[tr.stats.station]
+            except KeyError:
+                log(f'No coordinates available for {tr.id}. Skipping.')
+                pass
+        log('Done')
 
     # Return the Stream with coordinates attached
     return st_out
